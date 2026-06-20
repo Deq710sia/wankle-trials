@@ -102,8 +102,41 @@ def main():
     no_progress = {v: 0 for v in args.versions}
 
     # v27-A/B-auto: track whether we've launched A/B variants
+    # Persist to file so watchdog restarts don't re-launch or skip A/B
     ab_variants = ['v27-no-pathguard', 'v27-cap-pred8', 'v27-mag045']
-    ab_launched = False
+    AB_FLAG_FILE = CHEAT_DIR / 'ab-variants-launched.flag'
+
+    def ab_already_launched():
+        """Check if A/B variants were already launched (by this or a previous watchdog)."""
+        if AB_FLAG_FILE.exists():
+            return True
+        # Also check if any A/B CSV has trials (means a previous watchdog launched them)
+        for abv in ab_variants:
+            csv = CHEAT_DIR / f'parallel-{abv}-results.csv'
+            if csv.exists():
+                try:
+                    with open(csv) as f:
+                        n = sum(1 for _ in f) - 1
+                    if n > 0:
+                        return True
+                except:
+                    pass
+        return False
+
+    def mark_ab_launched():
+        """Persist that A/B variants have been launched."""
+        AB_FLAG_FILE.write_text(str(int(time.time())))
+
+    ab_launched = ab_already_launched()
+    if ab_launched:
+        log(f'  A/B variants already launched (flag file or CSV data exists) — will monitor them')
+        # Add A/B variants to monitored versions
+        for abv in ab_variants:
+            if abv not in args.versions:
+                args.versions.append(abv)
+                last_counts[abv] = 0
+                no_progress[abv] = 0
+        log(f'  Monitoring: {args.versions}')
 
     while True:
         all_complete = True
@@ -157,8 +190,10 @@ def main():
             last_counts[ver] = cur_count
 
         # v27-A/B-auto: if all monitored versions complete + A/B not yet launched, launch them
+        # This handles the contender→A/B handoff automatically.
+        # Checks: (1) all args.versions complete, (2) v27 specifically complete, (3) A/B not yet launched
         if all_complete and not ab_launched:
-            # Verify v27 (the contender) is complete — only launch A/B if v27 won
+            # Verify v27 (the contender) is complete — only launch A/B if v27 finished
             v27_csv = CHEAT_DIR / 'parallel-v27-results.csv'
             v27_count = 0
             if v27_csv.exists():
@@ -168,18 +203,51 @@ def main():
                 except:
                     pass
             if v27_count >= args.trials * 5:
-                log(f'  ALL CONTENDERS COMPLETE — auto-launching A/B variants: {ab_variants}')
+                log(f'  🚀 CONTENDER PHASE COMPLETE — auto-launching A/B variants: {ab_variants}')
                 for abv in ab_variants:
                     if not driver_running(abv):
                         launch_driver(abv, args.trials, args.duration)
                         time.sleep(2)
                 ab_launched = True
+                mark_ab_launched()  # Persist so watchdog restarts don't re-launch
                 # Add A/B variants to monitored versions so watchdog keeps an eye on them
-                args.versions.extend(ab_variants)
                 for abv in ab_variants:
-                    last_counts[abv] = 0
-                    no_progress[abv] = 0
+                    if abv not in args.versions:
+                        args.versions.append(abv)
+                        last_counts[abv] = 0
+                        no_progress[abv] = 0
                 log(f'  A/B variants added to monitoring: {args.versions}')
+            elif v27_count < args.trials * 5 and 'v27' not in args.versions:
+                # v27 not in args.versions but needs to complete before A/B
+                # This handles the case where watchdog was started with only v24/v25
+                # but v27 also needs to finish
+                log(f'  ⚠️ v27 not complete ({v27_count}/{args.trials * 5}) and not in monitored list — adding it')
+                args.versions.append('v27')
+                last_counts['v27'] = 0
+                no_progress['v27'] = 0
+                if not driver_running('v27'):
+                    launch_driver('v27', args.trials, args.duration)
+
+        # Check if everything (including A/B) is complete
+        if ab_launched:
+            all_ab_complete = True
+            for abv in ab_variants:
+                csv = CHEAT_DIR / f'parallel-{abv}-results.csv'
+                n = 0
+                if csv.exists():
+                    try:
+                        with open(csv) as f:
+                            n = sum(1 for _ in f) - 1
+                    except:
+                        pass
+                if n < args.trials * 5:
+                    all_ab_complete = False
+                    break
+            if all_ab_complete and all_complete:
+                log(f'  🎉 ALL TRIALS COMPLETE — all 9 versions hit {args.trials * 5} trials')
+                log(f'  Total: {sum(args.trials * 5 for _ in range(9))} trials done')
+                log(f'  Watchdog exiting — trials finished.')
+                break
 
         time.sleep(30)
 

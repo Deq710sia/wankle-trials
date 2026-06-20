@@ -1,5 +1,0 @@
-*.log
-*.tmp
-__pycache__/
-# Don't ignore telemetry — it's important
-!telemetry/
