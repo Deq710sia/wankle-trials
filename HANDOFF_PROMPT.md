@@ -28,3 +28,5 @@ The HANDOFF.md has everything you need:
 Read `ascii-art/README.md` for the mural schedule and style notes. The user specifically wants creative, non-repeating ASCII art between checks, and themed murals at milestones (675=halfway, 710=DAB/oil rig, 900=contenders done, 1350=final).
 
 Do NOT ask the user questions. Read HANDOFF.md, set up, fix the bot, archive incomplete data, launch, monitor, finish.
+
+**Telemetry integrity system**: 5 infrastructure processes (not 4) — the 5th is `telemetry-field-validator` which auto-detects bot source changes and updates the anomaly detector's field expectations. The anomaly detector now checks ALL telemetry fields on EVERY trial. This prevents bugs like the hunter-bot gap from going undetected. See HANDOFF.md "TELEMETRY INTEGRITY SYSTEM" section.

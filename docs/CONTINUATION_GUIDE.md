@@ -247,3 +247,40 @@ setsid -f bash /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh > /dev
 5. **Telemetry backfill is safe to run anytime** — `python3 /home/z/my-project/scripts/cheat-tests/telemetry-backfill.py`
 6. **Git backup runs every 5 min automatically** — don't interfere unless it's broken.
 7. **Archive, don't delete** — when removing incomplete data, MOVE to `archive/` folder.
+
+## Telemetry Integrity System (self-healing)
+
+### 5 infrastructure processes (not 4):
+
+1. **watchdog.py** — monitors drivers, auto-launches A/B variants
+2. **manifest-updater.py** — writes manifest + trials.jsonl every 30s
+3. **backup-manager.py** — backups every 30 trials + retention
+4. **anomaly-detector.py** — scans for bad trials + **telemetry field completeness**
+5. **telemetry-field-validator.py** — parses bot source, updates expected fields every 5 min
+
+Plus git-backup loop (every 5 min).
+
+### How telemetry validation works:
+
+1. `telemetry-field-validator.py` parses bot JS source files → extracts expected fields per bot type → writes `expected-telemetry-fields.json`
+2. `anomaly-detector.py` reads `expected-telemetry-fields.json` → checks each trial's first JSONL sample for ALL expected fields
+3. If fields missing → anomaly → trial removed from CSV → driver reruns
+4. If someone patches a bot to add fields → validator auto-updates expectations → no code changes needed
+
+### Launching all 5 processes:
+
+```bash
+setsid -f bash /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh > /dev/null 2>&1 < /dev/null
+setsid -f bash /home/z/my-project/scripts/cheat-tests/manifest-updater-wrapper.sh > /dev/null 2>&1 < /dev/null
+setsid -f bash /home/z/my-project/scripts/cheat-tests/backup-manager-wrapper.sh > /dev/null 2>&1 < /dev/null
+setsid -f bash /home/z/my-project/scripts/cheat-tests/anomaly-detector-wrapper.sh > /dev/null 2>&1 < /dev/null
+setsid -f bash /home/z/my-project/scripts/cheat-tests/telemetry-field-validator-wrapper.sh > /dev/null 2>&1 < /dev/null
+setsid -f bash -c 'while true; do /home/z/agent-ctx/git-backup.sh; sleep 300; done' > /dev/null 2>&1 < /dev/null
+```
+
+### No-halt patching:
+
+- Bot source files: editable while drivers run (read at inject time, not process start)
+- expected-telemetry-fields.json: rewritable while anomaly-detector runs (read fresh each cycle)
+- Any wrapper: kill the python process, wrapper restarts within 5s with new code
+- `fix-hunter-bot-telemetry.patch.sh`: patches bot + auto-archives old data + triggers validator — all in 1 command

@@ -576,3 +576,67 @@ The passive-bot.js and passive-nofire-bot.js are CORRECT — they have all field
 The hunter-bot-v3.js was patched to READ `_wklDodgeDebug` and `_wklPathGuard` (lines 94-115) but the sample output block (lines 668-688) was never updated to WRITE those values. The passive-bot.js was patched correctly because it was the primary test bot. The hunter bot was an afterthought.
 
 The deep-analyze scripts (`harness/analyze-csv-results.py`, `harness/analyze-v22.3-deep.py`) were not used during this session — they exist in the repo but were written for earlier trial phases. They would have caught this if run.
+
+---
+
+## TELEMETRY INTEGRITY SYSTEM (self-healing — prevents future gaps)
+
+### How it works
+
+3 components work together to ensure ALL telemetry fields are collected on EVERY trial:
+
+1. **telemetry-field-validator.py** (runs every 5 min via wrapper)
+   - Parses bot JS source files to extract expected telemetry fields per bot type
+   - Writes `expected-telemetry-fields.json`
+   - If someone patches a bot to add new fields → re-running this auto-updates expectations
+   - No code changes needed in anomaly-detector
+
+2. **anomaly-detector.py** (runs every 60s, UPGRADED)
+   - Now reads `expected-telemetry-fields.json`
+   - For each trial, checks first JSONL sample has ALL expected fields for that bot type
+   - If fields missing → flags as anomaly → removes CSV row → driver reruns
+   - This would have caught the hunter-bot gap automatically on the FIRST trial
+
+3. **fix-hunter-bot-telemetry.patch.sh** (one-shot, UPGRADED)
+   - After patching the bot, AUTO-ARCHIVES old incomplete data (MOVE, don't delete)
+   - Archives JSONL logs, telemetry files, CSV rows, trials.jsonl entries
+   - Triggers telemetry-field-validator to update expected fields
+   - All in one script — next bot runs 1 command and everything is handled
+
+### What this means for the next bot
+
+If a bot is missing telemetry fields:
+1. The anomaly detector catches it on the FIRST trial (within 60s)
+2. The trial is removed from CSV → driver reruns it
+3. After 3 retries, it's left in CSV with reason logged
+4. The bot must be fixed before those trials will pass
+
+If someone patches a bot to add NEW fields:
+1. The field validator re-parses the bot source (every 5 min)
+2. `expected-telemetry-fields.json` is updated automatically
+3. The anomaly detector picks up the new expectations on its next cycle
+4. No manual code changes needed anywhere
+
+### No-halt patching
+
+All 3 components can be updated without halting any running process:
+- Bot source files can be edited while drivers are running (drivers read the file at inject time, not at process start)
+- `expected-telemetry-fields.json` can be rewritten while anomaly-detector is running (it reads the file fresh each cycle)
+- The anomaly-detector can be killed + restarted via its wrapper (wrapper auto-restarts within 5s)
+- The field validator can be killed + restarted via its wrapper
+
+### Launching the field validator (Step 3b addition)
+
+Add this to the infrastructure launch commands:
+```bash
+setsid -f bash /home/z/my-project/scripts/cheat-tests/telemetry-field-validator-wrapper.sh > /dev/null 2>&1 < /dev/null
+```
+
+This makes 5 infrastructure processes total:
+1. watchdog (monitors drivers)
+2. manifest-updater (writes manifest + trials.jsonl)
+3. backup-manager (backups every 30 trials)
+4. anomaly-detector (scans for bad trials + telemetry gaps)
+5. telemetry-field-validator (updates expected fields every 5 min)
+
+Plus git-backup loop (every 5 min).
