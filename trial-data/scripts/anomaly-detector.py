@@ -1,0 +1,226 @@
+#!/usr/bin/env python3
+"""
+anomaly-detector.py — independent anomaly scanner.
+
+ONLY does:
+  - Every 60s, scan all version CSVs for anomalous rows
+  - Log anomalies to /home/z/my-project/scripts/cheat-tests/anomaly-log.jsonl
+  - Remove anomalous rows from CSV (so driver re-runs them on next trial)
+  - Max 3 retries per (version, trial, levelId, aimbotOff) — tracked in retry-counts.json
+
+Does NOT:
+  - Touch drivers
+  - Touch manifest
+  - Touch telemetry
+  - Touch backups
+
+If it dies, just relaunch — it's idempotent.
+"""
+import csv
+import json
+import os
+import time
+from datetime import datetime
+from pathlib import Path
+
+CHEAT_DIR = Path('/home/z/my-project/scripts/cheat-tests')
+ANOMALY_LOG = CHEAT_DIR / 'anomaly-log.jsonl'
+RETRY_COUNTS = CHEAT_DIR / 'anomaly-retry-counts.json'
+DETECTOR_LOG = CHEAT_DIR / 'anomaly-detector.log'
+
+ALL_VERSIONS = ['v19', 'v21.7', 'v22.8', 'v24', 'v25', 'v27']
+MAX_RETRIES = 3
+MIN_DURATION_S = 80
+MIN_FPS = 30
+
+
+def log(msg):
+    ts = datetime.now().strftime('%H:%M:%S')
+    line = f'[{ts}] {msg}'
+    print(line, flush=True)
+    with open(DETECTOR_LOG, 'a') as f:
+        f.write(line + '\n')
+
+
+def log_anomaly(ver, row, reason, action):
+    entry = {
+        'timestamp': datetime.now().isoformat(),
+        'version': ver,
+        'trial': row.get('trial'),
+        'levelId': row.get('levelId'),
+        'aimbotOff': row.get('aimbotOff'),
+        'reason': reason,
+        'action': action,
+        'kills': row.get('kills'),
+        'deaths': row.get('deaths'),
+        'duration': row.get('duration'),
+        'avgFps': row.get('avgFps'),
+    }
+    with open(ANOMALY_LOG, 'a') as f:
+        f.write(json.dumps(entry) + '\n')
+
+
+def load_retry_counts():
+    if RETRY_COUNTS.exists():
+        try:
+            return json.loads(RETRY_COUNTS.read_text())
+        except:
+            return {}
+    return {}
+
+
+def save_retry_counts(counts):
+    tmp = RETRY_COUNTS.with_suffix('.json.tmp')
+    tmp.write_text(json.dumps(counts, indent=2))
+    tmp.rename(RETRY_COUNTS)
+
+
+def read_csv_rows(ver):
+    csv_path = CHEAT_DIR / f'parallel-{ver}-results.csv'
+    if not csv_path.exists():
+        return [], None
+    rows = []
+    fieldnames = None
+    with open(csv_path) as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames
+        for r in reader:
+            if r.get('version') == 'version' or not r.get('version'):
+                continue
+            try:
+                rows.append({
+                    'version': r['version'],
+                    'trial': int(r['trial']),
+                    'kills': int(r['kills']),
+                    'deaths': int(r['deaths']),
+                    'wave': int(r['wave']),
+                    'alive': int(r['alive']),
+                    'duration': int(r['durationSec']),
+                    'avgFps': float(r.get('avgFps', 0) or 0),
+                    'minFps': float(r.get('minFps', 0) or 0),
+                    'levelId': r['levelId'],
+                    'mode': r['mode'],
+                    'aimbotOff': r.get('aimbotOff', '0') == '1',
+                    'jsonlFile': r.get('jsonlFile', ''),
+                    '_raw': r,
+                })
+            except (ValueError, KeyError):
+                continue
+    return rows, fieldnames
+
+
+def is_anomalous(row):
+    """Returns (is_anomalous, reason)."""
+    # Survival: K=0 + D=0 + dead = immobile cheat bug
+    if row['mode'] == 'survival':
+        if row['kills'] == 0 and row['deaths'] == 0 and row['alive'] == 0:
+            return True, 'immobile_survival (K=0 D=0 dead)'
+        if row['kills'] == 0 and row['deaths'] == 0 and row['alive'] == 1 and row['duration'] < MIN_DURATION_S:
+            return True, f'early_crash (dur={row["duration"]}s)'
+    # Missing JSONL
+    if not row['jsonlFile']:
+        return True, 'missing_jsonl_field'
+    jsonl_path = CHEAT_DIR / f'parallel-{row["version"]}-logs' / row['jsonlFile']
+    if not jsonl_path.exists():
+        return True, f'jsonl_file_missing ({row["jsonlFile"]})'
+    # NaN/zero FPS
+    if row['avgFps'] == 0 or row['avgFps'] != row['avgFps']:
+        return True, 'nan_or_zero_fps'
+    # Campaign: 0 deaths + few enemies = server didn't spawn
+    if row['mode'] == 'campaign' and row['aimbotOff'] and row['deaths'] == 0 and row['duration'] >= MIN_DURATION_S:
+        try:
+            samples = []
+            with open(jsonl_path) as f:
+                for line in f:
+                    try:
+                        e = json.loads(line)
+                        if e.get('kind') == 'sample':
+                            samples.append(e)
+                    except:
+                        pass
+            if samples:
+                max_enemies = max(s.get('enemies', 0) for s in samples)
+                max_real_shells = max(s.get('realShells', 0) for s in samples)
+                if max_enemies < 5:
+                    return True, f'server_no_bots (max_enemies={max_enemies})'
+                if max_real_shells == 0:
+                    return True, 'server_no_shells'
+        except:
+            pass
+    return False, ''
+
+
+def remove_rows(ver, rows_to_remove, fieldnames):
+    """Remove anomalous rows from CSV + delete their JSONL files."""
+    if not rows_to_remove:
+        return 0
+    csv_path = CHEAT_DIR / f'parallel-{ver}-results.csv'
+    if not csv_path.exists():
+        return 0
+    keys_to_remove = set()
+    for r in rows_to_remove:
+        keys_to_remove.add((str(r['trial']), r['levelId'], '1' if r['aimbotOff'] else '0'))
+    kept = []
+    removed = 0
+    with open(csv_path) as f:
+        reader = csv.DictReader(f)
+        for r in reader:
+            if r.get('version') == 'version':
+                kept.append(r); continue
+            key = (r.get('trial', ''), r.get('levelId', ''), r.get('aimbotOff', '0'))
+            if key in keys_to_remove:
+                removed += 1
+                jf = r.get('jsonlFile', '')
+                if jf:
+                    jp = CHEAT_DIR / f'parallel-{ver}-logs' / jf
+                    if jp.exists():
+                        try: jp.unlink()
+                        except: pass
+            else:
+                kept.append(r)
+    with open(csv_path, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for r in kept:
+            writer.writerow(r)
+    return removed
+
+
+def main():
+    log('anomaly-detector started (60s loop)')
+    while True:
+        try:
+            retry_counts = load_retry_counts()
+            total_anomalies = 0
+            for ver in ALL_VERSIONS:
+                rows, fieldnames = read_csv_rows(ver)
+                if not rows:
+                    continue
+                anomalies = []
+                for r in rows:
+                    anomalous, reason = is_anomalous(r)
+                    if not anomalous:
+                        continue
+                    key = f'{ver}|{r["trial"]}|{r["levelId"]}|{r["aimbotOff"]}'
+                    retry_counts[key] = retry_counts.get(key, 0) + 1
+                    if retry_counts[key] <= MAX_RETRIES:
+                        log(f'  {ver} t{r["trial"]} {r["levelId"]}: ANOMALY ({reason}) — retry {retry_counts[key]}/{MAX_RETRIES}')
+                        log_anomaly(ver, r, reason, f'retry_{retry_counts[key]}')
+                        anomalies.append(r)
+                    else:
+                        log(f'  {ver} t{r["trial"]} {r["levelId"]}: ANOMALY ({reason}) — MAX RETRIES, keeping')
+                        log_anomaly(ver, r, reason, 'max_retries_exceeded')
+                if anomalies:
+                    removed = remove_rows(ver, anomalies, fieldnames)
+                    total_anomalies += removed
+                    log(f'  {ver}: removed {removed} anomalous rows (will be re-run)')
+            save_retry_counts(retry_counts)
+            if total_anomalies > 0:
+                log(f'  cycle complete: {total_anomalies} anomalies removed')
+        except Exception as e:
+            log(f'  ERROR: {e}')
+        time.sleep(60)
+
+
+if __name__ == '__main__':
+    main()
