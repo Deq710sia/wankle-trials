@@ -445,3 +445,110 @@ ps -ef | grep -E "(wrapper|watchdog.py|manifest-updater.py|backup-manager.py|ano
 ```
 
 If trials < 1350 and processes = 0, launch everything per Step 3.
+
+---
+
+## CRITICAL: HUNTER-BOT TELEMETRY GAP (MUST FIX BEFORE RUNNING)
+
+### The Problem
+
+The `hunter-bot-v3.js` in `bots/` is MISSING telemetry field writes in its sample logging block. It reads `_wklDodgeDebug` and `_wklPathGuard` into internal variables but never writes them to the sample output. This means ALL hunter-bot trials (RK Fight + Dungeon across ALL versions) are missing:
+
+- `realShells` (real shell count)
+- `predictedShells` (predicted shell count)
+- `pathGuardCrosses` (path guard engagement)
+- `dodgeMoveX` / `dodgeMoveZ` (dodge vector)
+- `coldSpotReactive` / `coldSpotStrategic`
+- `guardViolated`
+
+The passive-bot.js and passive-nofire-bot.js are CORRECT — they have all fields. Only hunter-bot-v3.js is broken.
+
+### What was collected correctly
+
+| Map | Bot | Telemetry | Status |
+|---|---|---|---|
+| Custom Arena (CA) | passive-bot.js | ✅ Full | OK |
+| Dodge Training OFF | passive-nofire-bot.js | ✅ Full | OK |
+| Dodge Training ON | passive-bot.js | ✅ Full | OK |
+| RK Fight (RK) | hunter-bot-v3.js | ❌ Missing fields | MUST RERUN |
+| Dungeon (Dun) | hunter-bot-v3.js | ❌ Missing fields | MUST RERUN |
+
+### Trials needing rerun (262 total)
+
+| Version | RK Fight | Dungeon | Total |
+|---|---|---|---|
+| v19 | 30 | 30 | 60 |
+| v21.7 | 30 | 30 | 60 |
+| v22.8 | 30 | 30 | 60 |
+| v24 | 26 | 4 | 30 |
+| v25 | 28 | 5 | 33 |
+| v27 | 19 | 0 | 19 |
+| **Subtotal** | | | **262** |
+| A/B variants (new) | 90 | 90 | 180 |
+| **Grand total** | | | **442** |
+
+### Fix steps (DO THIS BEFORE LAUNCHING TRIALS)
+
+1. **Fix hunter-bot-v3.js** — Add the missing telemetry fields to the sample logging block (around line 684). Copy the field list from passive-bot.js's sample output. The fields to add:
+   - `dodgeMoveX`, `dodgeMoveZ`, `dodgeUrgency` (already has urgency)
+   - `realShells`, `predictedShells`
+   - `pathGuardCrosses`, `pathGuardRotation`, `pathGuardResolved`, `pathGuardShells`
+   - `coldSpotReactive`, `coldSpotStrategic`
+   - `guardViolated`
+   - `aliveTimeS`, `dodgeDurationS`, `nearestShellETA`
+
+2. **Delete all hunter-bot trial data** — Remove the broken JSONL logs, CSV rows, and telemetry files for RK Fight + Dungeon across all versions:
+   ```bash
+   for v in v19 v21.7 v22.8 v24 v25 v27; do
+     # Delete JSONL logs for RK Fight (c69c5ff7) and Dungeon (a6b7c90f)
+     rm -f /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-c69c5ff7-f4e-t*.jsonl
+     rm -f /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-a6b7c90f-813-t*.jsonl
+     # Delete telemetry files for RK and Dun
+     rm -rf /home/z/agent-ctx/telemetry/${v}/RK/
+     rm -rf /home/z/agent-ctx/telemetry/${v}/Dun/
+   done
+   ```
+
+3. **Remove hunter-bot rows from CSVs** — Delete RK Fight + Dungeon rows from each version's CSV so drivers re-run them:
+   ```bash
+   for v in v19 v21.7 v22.8 v24 v25 v27; do
+     CSV=/home/z/my-project/scripts/cheat-tests/parallel-${v}-results.csv
+     # Keep header + rows that are NOT RK Fight or Dungeon
+     head -1 "$CSV" > "$CSV.tmp"
+     grep -v "custom-c69c5ff7-f4e\|custom-a6b7c90f-813" "$CSV" >> "$CSV.tmp"
+     mv "$CSV.tmp" "$CSV"
+   done
+   ```
+
+4. **Remove hunter-bot entries from trials.jsonl** — Delete entries for RK Fight + Dungeon:
+   ```bash
+   python3 -c "
+   import json
+   with open('/home/z/agent-ctx/trials.jsonl') as f:
+       lines = f.readlines()
+   kept = []
+   removed = 0
+   for line in lines:
+       t = json.loads(line)
+       if t.get('map') in ('RK', 'Dun'):
+           removed += 1
+       else:
+           kept.append(line)
+   with open('/home/z/agent-ctx/trials.jsonl', 'w') as f:
+       f.writelines(kept)
+   print(f'Removed {removed} hunter-bot entries, kept {len(kept)}')
+   "
+   ```
+
+5. **Verify the fix** — After patching hunter-bot-v3.js, syntax check:
+   ```bash
+   node -c /home/z/my-project/scripts/cheat-tests/hunter-bot-v3.js
+   ```
+
+6. **Then launch infrastructure** — The watchdog will detect missing trials and re-run them with the fixed hunter bot.
+
+### Note on why this happened
+
+The hunter-bot-v3.js was patched to READ `_wklDodgeDebug` and `_wklPathGuard` (lines 94-115) but the sample output block (lines 668-688) was never updated to WRITE those values. The passive-bot.js was patched correctly because it was the primary test bot. The hunter bot was an afterthought.
+
+The deep-analyze scripts (`harness/analyze-csv-results.py`, `harness/analyze-v22.3-deep.py`) were not used during this session — they exist in the repo but were written for earlier trial phases. They would have caught this if run.

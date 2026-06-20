@@ -26,3 +26,5 @@ The HANDOFF.md has everything you need:
 Read `ascii-art/README.md` for the mural schedule and style notes. The user specifically wants creative, non-repeating ASCII art between checks, and themed murals at milestones (675=halfway, 710=DAB/oil rig, 900=contenders done, 1350=final).
 
 Do NOT ask the user questions. Read HANDOFF.md, set up, launch, monitor, finish.
+
+**CRITICAL: Before launching trials, you MUST fix the hunter-bot-v3.js telemetry gap.** The hunter bot is missing dodge telemetry fields (realShells, predictedShells, pathGuardCrosses, dodgeMoveX/Z) in its sample output. This means 262 existing trials (RK Fight + Dungeon across all versions) + 180 future A/B variant trials need to be (re)run with the fixed bot. See HANDOFF.md "CRITICAL: HUNTER-BOT TELEMETRY GAP" section for exact fix steps + rerun counts.

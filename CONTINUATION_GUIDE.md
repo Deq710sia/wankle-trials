@@ -193,3 +193,14 @@ Anomalous trials are removed from CSV + retried up to 3 times. After 3 retries, 
 4. **If a wrapper dies, relaunch with `setsid -f`** — that's the only way processes survive shell exit.
 5. **Telemetry backfill is safe to run anytime** — `python3 /home/z/my-project/scripts/cheat-tests/telemetry-backfill.py`
 6. **Git backup runs every 5 min automatically** — don't interfere unless it's broken.
+
+## CRITICAL: Hunter-bot telemetry gap (read before launching)
+
+The `hunter-bot-v3.js` is MISSING telemetry fields in its sample output. ALL hunter-bot trials (RK Fight + Dungeon) across ALL versions have incomplete telemetry. See HANDOFF.md "CRITICAL: HUNTER-BOT TELEMETRY GAP" for:
+
+- Exact list of missing fields
+- 262 existing trials that need rerun
+- 180 future A/B variant trials that need the fix
+- Step-by-step fix instructions (patch hunter-bot-v3.js + delete old data + rerun)
+
+**DO NOT launch trials until this is fixed.** The passive-bot trials (Custom Arena, Dodge Training) are fine — only hunter-bot trials are affected.

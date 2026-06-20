@@ -113,7 +113,9 @@ Auto-pushed every 5 minutes by `git-backup.sh`. Even if the VM dies, you lose at
 
 3. **watchdog-wrapper.sh version list:** The wrapper monitors `v24 v25 v27` (contenders still in progress). If you need to change which versions are monitored (e.g., after contenders complete), edit the wrapper and restart. See HANDOFF.md Step 3c.
 
-4. **A/B variant auto-launch:** When v24+v25+v27 all hit 150/150, the watchdog auto-launches 3 A/B variants (v27-no-pathguard, v27-cap-pred8, v27-mag045). No manual intervention needed.
+4. **HUNTER-BOT TELEMETRY GAP (CRITICAL):** The `hunter-bot-v3.js` is missing dodge telemetry fields (realShells, predictedShells, pathGuardCrosses, dodgeMoveX/Z) in its sample output. 262 existing trials (RK Fight + Dungeon) + 180 future A/B variant trials need (re)running with the fixed bot. See HANDOFF.md "CRITICAL: HUNTER-BOT TELEMETRY GAP" for fix steps.
+
+5. **A/B variant auto-launch:** When v24+v25+v27 all hit 150/150, the watchdog auto-launches 3 A/B variants (v27-no-pathguard, v27-cap-pred8, v27-mag045). No manual intervention needed.
 
 ## Key Files for New Session
 
