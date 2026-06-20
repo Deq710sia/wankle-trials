@@ -1,6 +1,6 @@
 {
-  "lastUpdated": "2026-06-20T10:00:12.248271+00:00",
-  "watchdogPid": 17508,
+  "lastUpdated": "2026-06-20T10:05:12.459544+00:00",
+  "watchdogPid": 9682,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
   "anomalyLogPath": "/home/z/my-project/scripts/cheat-tests/anomaly-log.jsonl",
@@ -8,20 +8,20 @@
   "telemetryDir": "/home/z/agent-ctx/telemetry",
   "versionsCompleted": [
     "v19",
+    "v21.7",
     "v22.8"
   ],
   "versionsInProgress": [
-    "v21.7",
     "v24",
-    "v25"
+    "v25",
+    "v27"
   ],
   "versionsRemaining": [
-    "v27",
     "v27-no-pathguard",
     "v27-cap-pred8",
     "v27-mag045"
   ],
-  "trialsCompleted": 486,
+  "trialsCompleted": 490,
   "trialsTotal": 1350,
   "perVersion": {
     "v19": {
@@ -33,9 +33,9 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v19"
     },
     "v21.7": {
-      "completed": 149,
+      "completed": 150,
       "target": 150,
-      "status": "in_progress",
+      "status": "complete",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v21.7-results.csv",
       "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v21.7-logs",
       "telemetryDir": "/home/z/agent-ctx/telemetry/v21.7"
@@ -49,7 +49,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v22.8"
     },
     "v24": {
-      "completed": 12,
+      "completed": 13,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v24-results.csv",
@@ -57,7 +57,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v24"
     },
     "v25": {
-      "completed": 25,
+      "completed": 26,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v25-results.csv",
@@ -65,9 +65,9 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v25"
     },
     "v27": {
-      "completed": 0,
+      "completed": 1,
       "target": 150,
-      "status": "pending",
+      "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v27-results.csv",
       "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v27-logs",
       "telemetryDir": "/home/z/agent-ctx/telemetry/v27"
@@ -98,15 +98,15 @@
     }
   },
   "backupLocations": [
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-pre-switch-complete-20260620_100146",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t150-20260620_100146",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-pre-switch-complete-20260620_100016",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t150-20260620_100016",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-pre-switch-complete-20260620_100016",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t150-20260620_100016",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t120-20260620_091016",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t120-20260620_090916",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t120-20260620_090916",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t90-20260620_081646",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t90-20260620_081646",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t90-20260620_081646",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t60-20260620_072546",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t60-20260620_072546",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t60-20260620_072546"
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t120-20260620_090916"
   ],
   "plannedVersions": [
     "v19",
