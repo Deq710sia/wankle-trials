@@ -1,0 +1,94 @@
+{
+  "lastUpdated": "2026-06-20T09:16:53.283040+00:00",
+  "watchdogPid": 17508,
+  "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
+  "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
+  "anomalyLogPath": "/home/z/my-project/scripts/cheat-tests/anomaly-log.jsonl",
+  "trialsJsonlPath": "/home/z/agent-ctx/trials.jsonl",
+  "telemetryDir": "/home/z/agent-ctx/telemetry",
+  "versionsCompleted": [],
+  "versionsInProgress": [
+    "v19",
+    "v21.7",
+    "v22.8",
+    "v24",
+    "v25"
+  ],
+  "versionsRemaining": [
+    "v27"
+  ],
+  "trialsCompleted": 409,
+  "trialsTotal": 900,
+  "perVersion": {
+    "v19": {
+      "completed": 124,
+      "target": 150,
+      "status": "in_progress",
+      "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v19-results.csv",
+      "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v19-logs",
+      "telemetryDir": "/home/z/agent-ctx/telemetry/v19"
+    },
+    "v21.7": {
+      "completed": 124,
+      "target": 150,
+      "status": "in_progress",
+      "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v21.7-results.csv",
+      "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v21.7-logs",
+      "telemetryDir": "/home/z/agent-ctx/telemetry/v21.7"
+    },
+    "v22.8": {
+      "completed": 124,
+      "target": 150,
+      "status": "in_progress",
+      "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v22.8-results.csv",
+      "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v22.8-logs",
+      "telemetryDir": "/home/z/agent-ctx/telemetry/v22.8"
+    },
+    "v24": {
+      "completed": 12,
+      "target": 150,
+      "status": "in_progress",
+      "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v24-results.csv",
+      "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v24-logs",
+      "telemetryDir": "/home/z/agent-ctx/telemetry/v24"
+    },
+    "v25": {
+      "completed": 25,
+      "target": 150,
+      "status": "in_progress",
+      "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v25-results.csv",
+      "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v25-logs",
+      "telemetryDir": "/home/z/agent-ctx/telemetry/v25"
+    },
+    "v27": {
+      "completed": 0,
+      "target": 150,
+      "status": "pending",
+      "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v27-results.csv",
+      "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v27-logs",
+      "telemetryDir": "/home/z/agent-ctx/telemetry/v27"
+    }
+  },
+  "backupLocations": [
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t120-20260620_091016",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t120-20260620_090916",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t120-20260620_090916",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t90-20260620_081646",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t90-20260620_081646",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t90-20260620_081646",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t60-20260620_072546",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t60-20260620_072546",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t60-20260620_072546"
+  ],
+  "plannedVersions": [
+    "v19",
+    "v21.7",
+    "v22.8",
+    "v24",
+    "v25",
+    "v27"
+  ],
+  "targetPerVersion": 150,
+  "continuationGuide": "/home/z/agent-ctx/CONTINUATION_GUIDE.md",
+  "note": "Single source of truth. Read this first to reconstruct state."
+}
