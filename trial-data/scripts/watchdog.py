@@ -101,7 +101,12 @@ def main():
     last_counts = {v: 0 for v in args.versions}
     no_progress = {v: 0 for v in args.versions}
 
+    # v27-A/B-auto: track whether we've launched A/B variants
+    ab_variants = ['v27-no-pathguard', 'v27-cap-pred8', 'v27-mag045']
+    ab_launched = False
+
     while True:
+        all_complete = True
         for ver in args.versions:
             # Count CSV rows (lightweight — just wc -l)
             csv_path = CHEAT_DIR / f'parallel-{ver}-results.csv'
@@ -115,7 +120,9 @@ def main():
                     pass
 
             target = args.trials * 5
-            if cur_count >= target:
+            if cur_count < target:
+                all_complete = False
+            else:
                 continue  # version complete, skip
 
             # Check heartbeat
@@ -148,6 +155,31 @@ def main():
                 no_progress[ver] = 0
 
             last_counts[ver] = cur_count
+
+        # v27-A/B-auto: if all monitored versions complete + A/B not yet launched, launch them
+        if all_complete and not ab_launched:
+            # Verify v27 (the contender) is complete — only launch A/B if v27 won
+            v27_csv = CHEAT_DIR / 'parallel-v27-results.csv'
+            v27_count = 0
+            if v27_csv.exists():
+                try:
+                    with open(v27_csv) as f:
+                        v27_count = sum(1 for _ in f) - 1
+                except:
+                    pass
+            if v27_count >= args.trials * 5:
+                log(f'  ALL CONTENDERS COMPLETE — auto-launching A/B variants: {ab_variants}')
+                for abv in ab_variants:
+                    if not driver_running(abv):
+                        launch_driver(abv, args.trials, args.duration)
+                        time.sleep(2)
+                ab_launched = True
+                # Add A/B variants to monitored versions so watchdog keeps an eye on them
+                args.versions.extend(ab_variants)
+                for abv in ab_variants:
+                    last_counts[abv] = 0
+                    no_progress[abv] = 0
+                log(f'  A/B variants added to monitoring: {args.versions}')
 
         time.sleep(30)
 
