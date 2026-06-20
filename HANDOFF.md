@@ -640,3 +640,30 @@ This makes 5 infrastructure processes total:
 5. telemetry-field-validator (updates expected fields every 5 min)
 
 Plus git-backup loop (every 5 min).
+
+---
+
+## FINAL RULES FOR THE NEXT AGENT
+
+### 1. NEVER blindly trust files
+The manifest said "638 trials" but reality was 632. The hunter bot "had telemetry" but didn't write it. Always verify against raw JSONL logs — they are the source of truth.
+
+### 2. ALWAYS double-check
+- Before launching: manually inspect ONE trial's JSONL log for expected fields
+- Before declaring complete: verify CSV row count = raw log file count
+- Before trusting anomaly detector: verify it's catching things (check anomaly-log.jsonl)
+
+### 3. Keep it simple
+The hunter-bot gap happened because the bot READ telemetry into variables but never WROTE them to the sample output. Complex code hides simple bugs. Prefer explicit, verbose, obvious code.
+
+### 4. Test before trusting
+After patching any bot, run ONE trial manually and inspect the JSONL output. 90 seconds of testing saves 9 hours of reruns.
+
+### 5. Archive, don't delete
+Never delete data. Move to `archive/`. Old data may have partial value (kill/death data was valid even without dodge telemetry).
+
+### 6. Raw logs are the source of truth
+Everything else (CSV, manifest, trials.jsonl, telemetry JSON) is derived and can be rebuilt. When in doubt, check the raw logs.
+
+### 7. The user catches mistakes
+They caught the hunter-bot gap, the stale manifest, the phantom entries. Be honest about what you find. Bad news early is better than bad news late.

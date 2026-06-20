@@ -30,3 +30,23 @@ Read `ascii-art/README.md` for the mural schedule and style notes. The user spec
 Do NOT ask the user questions. Read HANDOFF.md, set up, fix the bot, archive incomplete data, launch, monitor, finish.
 
 **Telemetry integrity system**: 5 infrastructure processes (not 4) — the 5th is `telemetry-field-validator` which auto-detects bot source changes and updates the anomaly detector's field expectations. The anomaly detector now checks ALL telemetry fields on EVERY trial. This prevents bugs like the hunter-bot gap from going undetected. See HANDOFF.md "TELEMETRY INTEGRITY SYSTEM" section.
+
+═══════════════════════════════════════════════════════════════════
+FINAL RULES — READ THESE LAST
+═══════════════════════════════════════════════════════════════════
+
+1. NEVER BLINDLY TRUST FILES. The manifest said "638 trials" but reality was 632 — 6 phantom entries. The hunter bot "had telemetry" but actually didn't write it to samples. Always VERIFY against raw logs. Raw JSONL logs are the source of truth, not CSVs, not the manifest, not trials.jsonl. If something seems wrong, check the raw logs.
+
+2. ALWAYS DOUBLE-CHECK. Before launching trials, manually inspect ONE trial's JSONL log to confirm telemetry fields are present. Before declaring a version "complete," verify the CSV row count matches the raw log file count. Before trusting the anomaly detector, verify it's actually catching things.
+
+3. KEEP IT SIMPLE. The bot scripts and telemetry collection should be dead simple. If you're adding complexity, you're adding failure modes. The hunter-bot gap happened because the bot READ telemetry into variables but never WROTE them to the sample output — a simple oversight that complex code hides. Prefer explicit, verbose, obvious code over clever abstractions.
+
+4. TEST BEFORE TRUSTING. After patching any bot, run ONE trial manually and inspect the JSONL output before letting the full suite run. A 90-second test saves 9 hours of reruns.
+
+5. THE USER IS WATCHING. They caught the hunter-bot gap. They caught the stale manifest. They caught the phantom entries. They will catch your mistakes too. Be honest about what you find, even if it's bad news.
+
+6. ARCHIVE, DON'T DELETE. Never delete data. Move it to archive/. You might need it later. The old hunter-bot trials still have valid kill/death data even without dodge telemetry.
+
+7. STAY RUNNING. The user wants you to monitor continuously, create ASCII art between checks, and not stop until all 1350 trials are done. If the Bash tool times out, tell the user to restart — but the infrastructure keeps running autonomously.
+
+8. WHEN IN DOUBT, CHECK THE RAW LOGS. They are the single source of truth. Everything else (CSV, manifest, trials.jsonl, telemetry JSON) is derived and can be rebuilt.

@@ -284,3 +284,13 @@ setsid -f bash -c 'while true; do /home/z/agent-ctx/git-backup.sh; sleep 300; do
 - expected-telemetry-fields.json: rewritable while anomaly-detector runs (read fresh each cycle)
 - Any wrapper: kill the python process, wrapper restarts within 5s with new code
 - `fix-hunter-bot-telemetry.patch.sh`: patches bot + auto-archives old data + triggers validator — all in 1 command
+
+## Final Rules
+
+1. **NEVER blindly trust files.** Manifest said 638, reality was 632. Hunter bot "had telemetry" but didn't write it. Verify against raw JSONL logs.
+2. **ALWAYS double-check.** Inspect ONE trial's JSONL before launching. Verify CSV = raw log count before declaring complete.
+3. **Keep it simple.** The hunter-bot gap was a simple oversight hidden by complex code. Prefer explicit over clever.
+4. **Test before trusting.** One 90-second manual trial saves 9 hours of reruns.
+5. **Archive, don't delete.** Move to `archive/`, never `rm`.
+6. **Raw logs = source of truth.** Everything else is derived and rebuildable.
+7. **Be honest.** The user catches mistakes. Report bad news early.
