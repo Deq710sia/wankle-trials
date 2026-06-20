@@ -1,0 +1,181 @@
+{
+  "timestamp": "2026-06-20T23:42:45.224370+00:00",
+  "timestampUnix": 1781998965,
+  "heartbeats": {
+    "v24": {
+      "ts": 1781998964,
+      "ageSec": 1,
+      "alive": true,
+      "trialCount": 0
+    },
+    "v25": {
+      "ts": 1781998957,
+      "ageSec": 8,
+      "alive": true,
+      "trialCount": 0
+    },
+    "v27": {
+      "ts": 1781998960,
+      "ageSec": 5,
+      "alive": true,
+      "trialCount": 0
+    }
+  },
+  "activeBatch": "v24 v25 v27",
+  "allBatchesCompleteFlag": false,
+  "threads": {
+    "used": 683,
+    "limit": 929,
+    "pct": 74
+  },
+  "processes": {
+    "chrome": 54,
+    "drivers": 6,
+    "watchdog": 1,
+    "manifestUpdater": 1,
+    "backupManager": 1,
+    "anomalyDetector": 1,
+    "telemetryValidator": 0,
+    "batchOrchestrator": 1,
+    "gitBackup": 1,
+    "asciiArtGenerator": 0
+  },
+  "anomalies": [
+    {
+      "timestamp": "2026-06-20T23:36:31.765137",
+      "version": "v24",
+      "trial": 22,
+      "levelId": "custom-a6b7c90f-813",
+      "aimbotOff": false,
+      "reason": "immobile_survival (K=0 D=0 dead)",
+      "action": "retry_1",
+      "kills": 0,
+      "deaths": 0,
+      "duration": 116,
+      "avgFps": 0.0
+    }
+  ],
+  "retryCounts": 1,
+  "logs": {
+    "watchdog": [
+      "[23:38:51] ============================================================",
+      "[23:38:51] ============================================================",
+      "[23:38:51]   v24 driver already running",
+      "[23:38:51]   v24 driver already running",
+      "[23:38:51]   v25 driver already running",
+      "[23:38:51]   v25 driver already running",
+      "[23:38:51]   v27 driver already running",
+      "[23:38:51]   v27 driver already running",
+      "[23:41:51]   v24: no progress 3min (81/150) \u2014 kill + restart",
+      "[23:41:51]   v24: no progress 3min (81/150) \u2014 kill + restart",
+      "[23:41:54]   LAUNCHED v24 (session=pv24)",
+      "[23:41:54]   LAUNCHED v24 (session=pv24)",
+      "[23:41:54]   v25: no progress 3min (89/150) \u2014 kill + restart",
+      "[23:41:54]   v25: no progress 3min (89/150) \u2014 kill + restart",
+      "[23:41:57]   LAUNCHED v25 (session=pv25)",
+      "[23:41:57]   LAUNCHED v25 (session=pv25)",
+      "[23:41:57]   v27: no progress 3min (80/150) \u2014 kill + restart",
+      "[23:41:57]   v27: no progress 3min (80/150) \u2014 kill + restart",
+      "[23:42:00]   LAUNCHED v27 (session=pv27)",
+      "[23:42:00]   LAUNCHED v27 (session=pv27)"
+    ],
+    "batchOrchestrator": [
+      "[22:54:53] batch-orchestrator started (15s loop)",
+      "[22:54:53] batch-orchestrator started (15s loop)",
+      "[22:54:53]   Current batch: \"v24 v25 v27\"",
+      "[22:54:53]   Current batch: \"v24 v25 v27\"",
+      "[22:54:53]   Sequence: ['v24 v25 v27', 'v27-no-pathguard v27-cap-pred8 v27-mag045', 'v19 v21.7 v22.8']",
+      "[22:54:53]   Sequence: ['v24 v25 v27', 'v27-no-pathguard v27-cap-pred8 v27-mag045', 'v19 v21.7 v22.8']",
+      "[22:54:53]   Starting log scan at offset 834",
+      "[22:54:53]   Starting log scan at offset 834",
+      "[22:55:19] batch-orchestrator started (15s loop)",
+      "[22:55:19] batch-orchestrator started (15s loop)",
+      "[22:55:19]   Current batch: \"v24 v25 v27\"",
+      "[22:55:19]   Current batch: \"v24 v25 v27\"",
+      "[22:55:19]   Sequence: ['v24 v25 v27', 'v27-no-pathguard v27-cap-pred8 v27-mag045', 'v19 v21.7 v22.8']",
+      "[22:55:19]   Sequence: ['v24 v25 v27', 'v27-no-pathguard v27-cap-pred8 v27-mag045', 'v19 v21.7 v22.8']",
+      "[22:55:19]   Starting log scan at offset 834",
+      "[22:55:19]   Starting log scan at offset 834"
+    ],
+    "anomalyDetector": [
+      "[22:37:30] anomaly-detector started (60s loop)",
+      "[22:37:30] anomaly-detector started (60s loop)",
+      "[23:36:31]   v24 t22 custom-a6b7c90f-813: ANOMALY (immobile_survival (K=0 D=0 dead)) \u2014 retry 1/3",
+      "[23:36:31]   v24 t22 custom-a6b7c90f-813: ANOMALY (immobile_survival (K=0 D=0 dead)) \u2014 retry 1/3",
+      "[23:36:31]   v24: removed 1 anomalous rows (will be re-run)",
+      "[23:36:31]   v24: removed 1 anomalous rows (will be re-run)",
+      "[23:36:31]   cycle complete: 1 anomalies removed",
+      "[23:36:31]   cycle complete: 1 anomalies removed"
+    ],
+    "manifestUpdater": [
+      "[23:29:02]   appended 2 new trials, manifest refreshed",
+      "[23:29:02]   appended 2 new trials, manifest refreshed",
+      "[23:30:33]   appended 3 new trials, manifest refreshed",
+      "[23:30:33]   appended 3 new trials, manifest refreshed",
+      "[23:32:03]   appended 3 new trials, manifest refreshed",
+      "[23:32:03]   appended 3 new trials, manifest refreshed",
+      "[23:34:03]   appended 1 new trials, manifest refreshed",
+      "[23:34:03]   appended 1 new trials, manifest refreshed",
+      "[23:36:03]   appended 1 new trials, manifest refreshed",
+      "[23:36:03]   appended 1 new trials, manifest refreshed"
+    ],
+    "backupManager": [
+      "[22:37:30]   BACKUP v25 (t30) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v25-t30-20260620_223730",
+      "[22:37:30]   BACKUP v25 (t30) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v25-t30-20260620_223730",
+      "[22:37:30]   BACKUP v27 (t30) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v27-t30-20260620_223730",
+      "[22:37:30]   BACKUP v27 (t30) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v27-t30-20260620_223730",
+      "[22:43:00]   BACKUP v25 (t60) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v25-t60-20260620_224300",
+      "[22:43:00]   BACKUP v25 (t60) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v25-t60-20260620_224300",
+      "[22:58:30]   BACKUP v24 (t60) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v24-t60-20260620_225830",
+      "[22:58:30]   BACKUP v24 (t60) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v24-t60-20260620_225830",
+      "[22:58:30]   BACKUP v27 (t60) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v27-t60-20260620_225830",
+      "[22:58:30]   BACKUP v27 (t60) \u2192 /home/z/my-project/download/backups/trial-watchdog-backups/v27-t60-20260620_225830"
+    ],
+    "telemetryValidator": [
+      "[23:42:31]   hunter: 29 expected fields from hunter-bot-v3.js",
+      "[23:42:31]   hunter: 29 expected fields from hunter-bot-v3.js",
+      "[23:42:31]     fields: aimErr, botMode, coldSpotReactive, coldSpotStrategic, dodgeActive, dodgeMoveX, dodgeMoveZ, enemies, fps, guardViolated...",
+      "[23:42:31]     fields: aimErr, botMode, coldSpotReactive, coldSpotStrategic, dodgeActive, dodgeMoveX, dodgeMoveZ, enemies, fps, guardViolated...",
+      "[23:42:31]   wrote expected-telemetry-fields.json",
+      "[23:42:31]   wrote expected-telemetry-fields.json",
+      "[23:42:31]   \u2705 All recent trials have complete telemetry fields.",
+      "[23:42:31]   \u2705 All recent trials have complete telemetry fields.",
+      "[23:42:31] telemetry-field-validator complete",
+      "[23:42:31] telemetry-field-validator complete"
+    ]
+  },
+  "driverLogs": {
+    "v24": [
+      "[23:41:55] SKIP v24 t15 Dungeon (already done)",
+      "[23:41:55] SKIP v24 t16 Dungeon (already done)",
+      "[23:41:55] SKIP v24 t17 Dungeon (already done)",
+      "[23:41:55] SKIP v24 t18 Dungeon (already done)",
+      "[23:41:55] SKIP v24 t19 Dungeon (already done)",
+      "[23:41:55] SKIP v24 t20 Dungeon (already done)",
+      "[23:41:55] SKIP v24 t21 Dungeon (already done)",
+      "[23:41:55] RUN v24 t22 Dungeon"
+    ],
+    "v25": [
+      "[23:41:58] SKIP v25 t13 Dungeon (already done)",
+      "[23:41:58] SKIP v25 t14 Dungeon (already done)",
+      "[23:41:58] SKIP v25 t15 Dungeon (already done)",
+      "[23:41:58] SKIP v25 t16 Dungeon (already done)",
+      "[23:41:58] SKIP v25 t17 Dungeon (already done)",
+      "[23:41:58] SKIP v25 t18 Dungeon (already done)",
+      "[23:41:58] SKIP v25 t19 Dungeon (already done)",
+      "[23:41:58] RUN v25 t20 Dungeon"
+    ],
+    "v27": [
+      "[23:42:01] SKIP v27 t14 Dungeon (already done)",
+      "[23:42:01] SKIP v27 t15 Dungeon (already done)",
+      "[23:42:01] SKIP v27 t16 Dungeon (already done)",
+      "[23:42:01] SKIP v27 t17 Dungeon (already done)",
+      "[23:42:01] SKIP v27 t18 Dungeon (already done)",
+      "[23:42:01] SKIP v27 t19 Dungeon (already done)",
+      "[23:42:01] SKIP v27 t20 Dungeon (already done)",
+      "[23:42:01] RUN v27 t21 Dungeon"
+    ]
+  },
+  "asciiArtLive": [],
+  "lastManifestUpdate": "2026-06-20T23:42:33.541443+00:00"
+}

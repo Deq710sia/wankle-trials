@@ -1,6 +1,6 @@
 {
-  "lastUpdated": "2026-06-20T23:37:33.286478+00:00",
-  "watchdogPid": null,
+  "lastUpdated": "2026-06-20T23:42:33.541443+00:00",
+  "watchdogPid": 25773,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
   "anomalyLogPath": "/home/z/my-project/scripts/cheat-tests/anomaly-log.jsonl",
