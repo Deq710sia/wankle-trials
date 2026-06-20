@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-06-20T09:40:24.469523+00:00",
+  "lastUpdated": "2026-06-20T09:45:30.835625+00:00",
   "watchdogPid": 17508,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
@@ -15,13 +15,16 @@
     "v25"
   ],
   "versionsRemaining": [
-    "v27"
+    "v27",
+    "v27-no-pathguard",
+    "v27-cap-pred8",
+    "v27-mag045"
   ],
-  "trialsCompleted": 450,
-  "trialsTotal": 900,
+  "trialsCompleted": 460,
+  "trialsTotal": 1350,
   "perVersion": {
     "v19": {
-      "completed": 138,
+      "completed": 141,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v19-results.csv",
@@ -29,7 +32,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v19"
     },
     "v21.7": {
-      "completed": 137,
+      "completed": 141,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v21.7-results.csv",
@@ -37,7 +40,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v21.7"
     },
     "v22.8": {
-      "completed": 138,
+      "completed": 141,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v22.8-results.csv",
@@ -67,6 +70,30 @@
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v27-results.csv",
       "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v27-logs",
       "telemetryDir": "/home/z/agent-ctx/telemetry/v27"
+    },
+    "v27-no-pathguard": {
+      "completed": 0,
+      "target": 150,
+      "status": "pending",
+      "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v27-no-pathguard-results.csv",
+      "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v27-no-pathguard-logs",
+      "telemetryDir": "/home/z/agent-ctx/telemetry/v27-no-pathguard"
+    },
+    "v27-cap-pred8": {
+      "completed": 0,
+      "target": 150,
+      "status": "pending",
+      "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v27-cap-pred8-results.csv",
+      "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v27-cap-pred8-logs",
+      "telemetryDir": "/home/z/agent-ctx/telemetry/v27-cap-pred8"
+    },
+    "v27-mag045": {
+      "completed": 0,
+      "target": 150,
+      "status": "pending",
+      "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v27-mag045-results.csv",
+      "jsonlDir": "/home/z/my-project/scripts/cheat-tests/parallel-v27-mag045-logs",
+      "telemetryDir": "/home/z/agent-ctx/telemetry/v27-mag045"
     }
   },
   "backupLocations": [
@@ -86,7 +113,10 @@
     "v22.8",
     "v24",
     "v25",
-    "v27"
+    "v27",
+    "v27-no-pathguard",
+    "v27-cap-pred8",
+    "v27-mag045"
   ],
   "targetPerVersion": 150,
   "continuationGuide": "/home/z/agent-ctx/CONTINUATION_GUIDE.md",
