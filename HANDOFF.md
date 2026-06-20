@@ -1,23 +1,42 @@
 # HANDOFF DOCUMENT — Wankle3D Cheat Trials
 
-**Last updated:** 2026-06-20 ~17:00 UTC
-**Status:** Recovery from VM reset, trials resuming
-**GitHub repo:** https://github.com/Deq710sia/wankle-trials (private)
+**Last updated:** 2026-06-20 ~17:30 UTC
+**Status:** Trials paused. Ready for new bot to resume.
+**GitHub repo:** `https://github.com/Deq710sia/wankle-trials` (private)
 **GitHub token:** `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`
 
 ---
 
 ## WHO YOU ARE
 
-You are the next agent picking up a long-running trial suite for an aimbot/dodge cheat for Wankle3D (wanshot.lol), a 3D multiplayer tank game. The previous agent ran ~450 trials, then the VM was reset (user slept their PC). You need to resume from where it left off.
+You are the next agent picking up a long-running trial suite for an aimbot/dodge cheat for Wankle3D (wanshot.lol), a 3D multiplayer tank game. The previous agent ran ~632 trials across 6 cheat versions, then paused for handoff. You need to resume and finish the remaining ~718 trials.
 
-**READ THIS ENTIRE DOCUMENT BEFORE DOING ANYTHING.** Then read `/home/z/agent-ctx/trial-manifest.json` for current state.
+**READ THIS ENTIRE DOCUMENT BEFORE DOING ANYTHING.**
 
 ---
 
-## CURRENT STATE (as of last known good data)
+## STEP 0: CLONE THE REPO
 
-### Trials completed: 632/1350 (46.8%)
+Everything you need is in the GitHub repo. Clone it first:
+
+```bash
+git clone https://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@github.com/Deq710sia/wankle-trials.git
+cd wankle-trials
+```
+
+All paths in this document are **relative to the repo root** (the `wankle-trials/` directory you just cloned into).
+
+---
+
+## STEP 1: READ CURRENT STATE
+
+Read the manifest to see where trials left off:
+
+```bash
+cat trial-manifest.json | python3 -m json.tool
+```
+
+### Current state (as of last backup):
 
 | Version | Status | Trials | Notes |
 |---|---|---|---|
@@ -32,140 +51,135 @@ You are the next agent picking up a long-running trial suite for an aimbot/dodge
 | v27-mag045 | ⏳ pending | 0/150 | A/B variant — magnetize threshold 0.35→0.45 |
 
 **Total target:** 9 versions × 150 trials = 1350 trials
-**Remaining:** 718 trials (~8 hours wall clock at 3 parallel)
+**Remaining:** ~718 trials (~8 hours wall clock at 3 parallel)
 
 ---
 
-## WHAT HAPPENED (VM RESET TIMELINE)
+## REPO STRUCTURE
 
-1. **~05:42 UTC Jun 20** — Baseline trials launched (v19, v21.7, v22.8)
-2. **~10:02 UTC** — Baselines complete, contenders launched (v24, v25, v27)
-3. **~10:14 UTC** — Watchdog patched with A/B auto-launch code
-4. **~11:26 UTC** — Last successful git backup (632 trials complete)
-5. **~11:26-16:44 UTC** — **VM RESET** (user slept their PC). All processes died.
-6. **~16:44 UTC** — VM back up. Agent-ctx dir gone, scripts gone, only base cheat files survived.
-7. **~16:46 UTC** — Recovery: cloned GitHub repo, restored everything, relaunched infrastructure.
+```
+wankle-trials/
+├── HANDOFF.md                    ← you are here (this document)
+├── README.md                     ← overview + directory map
+├── CONTINUATION_GUIDE.md         ← detailed infrastructure guide
+├── trial-manifest.json           ← CURRENT STATE (read this first)
+├── trials.jsonl                  ← all trial results (one JSON per line)
+├── git-backup.sh                 ← auto-push script (run every 5 min)
+├── cheat-versions/               ← all cheat .user.js files
+│   ├── v19.user.js               ← baselines
+│   ├── v21.7.user.js
+│   ├── v22.8.user.js
+│   ├── v24.user.js               ← contenders
+│   ├── v25.user.js
+│   ├── v27.user.js
+│   ├── v27-no-pathguard.user.js  ← A/B variants
+│   ├── v27-cap-pred8.user.js
+│   └── v27-mag045.user.js
+├── snippets/                     ← drop-in code blocks
+│   ├── prediction-engine-snippet.js
+│   ├── dodge-magnetize-fix.js
+│   └── iteration-agent-prompt.md
+├── harness/                      ← test infrastructure scripts
+│   ├── watchdog.py               ← monitors drivers, auto-launches A/B
+│   ├── watchdog-wrapper.sh       ← auto-restarts watchdog if it dies
+│   ├── manifest-updater.py       ← writes manifest + trials.jsonl
+│   ├── manifest-updater-wrapper.sh
+│   ├── backup-manager.py         ← backups every 30 trials + retention
+│   ├── backup-manager-wrapper.sh
+│   ├── anomaly-detector.py       ← scans for bad trials, removes for re-run
+│   ├── anomaly-detector-wrapper.sh
+│   ├── telemetry-backfill.py     ← generates missing telemetry files
+│   ├── telemetry-writer.py       ← converts JSONL log → telemetry JSON
+│   ├── generic-trials.sh         ← main trial driver (one version, N trials)
+│   ├── survival-showdown-parallel.sh ← per-trial harness (browser + inject + run)
+│   └── ... (analysis scripts, chart builders)
+├── bots/                         ← bot scripts that drive the player tank
+│   ├── passive-bot.js            ← passive bot (fires only for respawn)
+│   ├── passive-nofire-bot.js     ← pure dodge bot (never fires)
+│   ├── hunter-bot-v3.js          ← aggressive hunter bot
+│   ├── human-bot.js
+│   └── test-bot-v2.js
+├── trial-data/                   ← THE RESULTS
+│   ├── trials.jsonl              ← summary (MOST IMPORTANT)
+│   ├── trial-manifest.json
+│   ├── csvs/                     ← per-version CSV files
+│   ├── logs/                     ← per-version JSONL logs (frame-by-frame)
+│   └── telemetry/                ← per-trial telemetry JSON files
+├── docs/
+│   └── CONTINUATION_GUIDE.md     ← detailed infrastructure guide
+├── ascii-art/                    ← ASCII art archive (murals + doodles)
+│   ├── README.md                 ← mural schedule + style notes
+│   ├── 01-420-weed-mural.txt
+│   ├── 02-armada-tide-turns.txt
+│   ├── 03-transition-complete.txt
+│   ├── 04-ab-armed.txt
+│   ├── 05-smaller-pieces.txt
+│   ├── 06-early-monitoring-tanks.txt
+│   ├── 07-mid-monitoring-dice.txt
+│   └── 08-late-monitoring-contenders.txt
+└── archive/                      ← legacy/duplicate files
+```
 
 ---
 
-## INFRASTRUCTURE (4 INDEPENDENT PROCESSES)
+## STEP 2: SET UP ENVIRONMENT
 
-All scripts live in `/home/z/my-project/scripts/cheat-tests/`. Each process has a bash wrapper that auto-restarts it if it dies. Launch with `setsid -f` so they survive session end.
+The trial infrastructure expects files in specific locations on the VM. You need to copy them from the repo:
 
-### 1. watchdog.py (MOST IMPORTANT)
-- **Wrapper:** `watchdog-wrapper.sh`
-- **Monitors:** v24, v25, v27 (contenders)
-- **Auto-launches A/B variants** when v24+v25+v27 all hit 150/150
-- **Heartbeat check:** if heartbeat stalled >30s, kill + restart driver
-- **Launch:**
 ```bash
-setsid -f bash /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh > /dev/null 2>&1 < /dev/null
-```
+# Create working directories
+mkdir -p /home/z/agent-ctx
+mkdir -p /home/z/my-project/scripts/cheat-tests
+mkdir -p /home/z/my-project/download
 
-### 2. manifest-updater.py
-- **Wrapper:** `manifest-updater-wrapper.sh`
-- **Writes:** `/home/z/agent-ctx/trial-manifest.json` + `/home/z/agent-ctx/trials.jsonl`
-- **Every 30s:** counts trials in CSVs, appends new ones to trials.jsonl with summary metrics
-- **Launch:**
-```bash
-setsid -f bash /home/z/my-project/scripts/cheat-tests/manifest-updater-wrapper.sh > /dev/null 2>&1 < /dev/null
-```
+# Copy everything from repo to working locations
+cp -r wankle-trials/* /home/z/agent-ctx/
+cp -r wankle-trials/.git /home/z/agent-ctx/
+cp wankle-trials/harness/*.py /home/z/my-project/scripts/cheat-tests/
+cp wankle-trials/harness/*.sh /home/z/my-project/scripts/cheat-tests/
+cp wankle-trials/bots/*.js /home/z/my-project/scripts/cheat-tests/
+cp wankle-trials/cheat-versions/*.user.js /home/z/my-project/download/
 
-### 3. backup-manager.py
-- **Wrapper:** `backup-manager-wrapper.sh`
-- **Every 30 trials per version:** backs up CSV + JSONL to `/home/z/my-project/download/backups/trial-watchdog-backups/`
-- **Retention:** keeps last 3 backups per version
-- **Pre-switch backup:** when a version completes, backs up before "switching"
-- **Launch:**
-```bash
-setsid -f bash /home/z/my-project/scripts/cheat-tests/backup-manager-wrapper.sh > /dev/null 2>&1 < /dev/null
-```
+# Restore CSVs (trial data) to working location
+cp wankle-trials/trial-data/csvs/*.csv /home/z/my-project/scripts/cheat-tests/
 
-### 4. anomaly-detector.py
-- **Wrapper:** `anomaly-detector-wrapper.sh`
-- **Every 60s:** scans CSVs for anomalies (K=0 D=0 dead in survival = immobile cheat bug, missing JSONL, NaN FPS, etc.)
-- **Removes anomalous rows** so drivers re-run them (max 3 retries per trial)
-- **Logs to:** `/home/z/my-project/scripts/cheat-tests/anomaly-log.jsonl`
-- **Launch:**
-```bash
-setsid -f bash /home/z/my-project/scripts/cheat-tests/anomaly-detector-wrapper.sh > /dev/null 2>&1 < /dev/null
-```
+# Restore JSONL logs
+for v in v19 v21.7 v22.8 v24 v25 v27; do
+  if [ -d "wankle-trials/trial-data/logs/${v}-logs" ]; then
+    mkdir -p "/home/z/my-project/scripts/cheat-tests/parallel-${v}-logs"
+    cp -r wankle-trials/trial-data/logs/${v}-logs/* "/home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/"
+  fi
+done
 
-### 5. git-backup loop (every 5 min)
-- **Script:** `/home/z/agent-ctx/git-backup.sh`
-- **Pushes** all trial data to GitHub every 5 minutes
-- **Launch:**
-```bash
-setsid -f bash -c 'while true; do /home/z/agent-ctx/git-backup.sh; sleep 300; done' > /dev/null 2>&1 < /dev/null
+# Restore webgpu-polyfill (needed by browser harness)
+# (This file should be in the repo root or download/ — check archive/ if missing)
+cp wankle-trials/trial-data/webgpu-polyfill.js /tmp/webgpu-polyfill.js 2>/dev/null || \
+  find wankle-trials/ -name "webgpu-polyfill.js" -exec cp {} /tmp/webgpu-polyfill.js \;
 ```
 
 ---
 
-## TRIAL DRIVERS
+## STEP 3: LAUNCH INFRASTRUCTURE
 
-Each version has a driver (`generic-trials.sh`) that runs trials sequentially. Launched by watchdog.
-
-**Driver command:** `bash generic-trials.sh <version> <num_trials> <duration> <session_name>`
-
-- **Trials per version:** 30 per map × 5 maps = 150
-- **Maps:** Custom Arena (survival), RK Fight (survival), Dungeon (survival), Dodge Training OFF (campaign, aimbot off), Dodge Training ON (campaign, aimbot on)
-- **Duration:** 90 seconds per trial
-- **Browser session:** each version gets its own (e.g. `pv24`, `pv25`, `pv27`)
-
-**Driver writes heartbeat every 10s:** `/home/z/my-project/scripts/cheat-tests/parallel-<ver>-heartbeat`
-
----
-
-## FILE LOCATIONS
-
-### Source of truth
-- `/home/z/agent-ctx/trial-manifest.json` — **READ THIS FIRST** (progress + file locations)
-- `/home/z/agent-ctx/trials.jsonl` — all trial results, one JSON per line
-- `/home/z/agent-ctx/telemetry/{version}/{map}/trial-NNN.json` — per-trial frame data
-
-### Trial data (raw)
-- `/home/z/my-project/scripts/cheat-tests/parallel-<ver>-results.csv` — per-version CSV
-- `/home/z/my-project/scripts/cheat-tests/parallel-<ver>-logs/` — per-version JSONL logs
-
-### Cheat versions
-- `/home/z/my-project/download/wankle-cheat-v*.user.js` — all versions v19 through v27 + 3 A/B variants
-
-### Infrastructure scripts
-- `/home/z/my-project/scripts/cheat-tests/*.py` — watchdog, manifest-updater, backup-manager, anomaly-detector, telemetry-backfill
-- `/home/z/my-project/scripts/cheat-tests/*.sh` — wrappers + generic-trials.sh + survival-showdown-parallel.sh (per-trial harness)
-
-### Bots
-- `/home/z/my-project/scripts/cheat-tests/passive-bot.js` — passive bot (fires only for respawn)
-- `/home/z/my-project/scripts/cheat-tests/passive-nofire-bot.js` — pure dodge bot (never fires)
-- `/home/z/my-project/scripts/cheat-tests/hunter-bot-v3.js` — aggressive hunter bot
-
-### Backups
-- `/home/z/my-project/download/backups/trial-watchdog-backups/` — local backups (last 3 per version)
-- **GitHub repo** — offsite backup, pushed every 5 min
-
-### ASCII art archive
-- `/home/z/agent-ctx/ascii-art/` — all murals + between-check doodles from previous agent
-
----
-
-## HOW TO RESUME (if processes are dead)
-
-### Step 1: Read the manifest
+### 3a. Verify cheat files exist
 ```bash
-cat /home/z/agent-ctx/trial-manifest.json | python3 -m json.tool
+ls /home/z/my-project/download/wankle-cheat-v*.user.js | wc -l
+# Should show 20 files (v19 through v27 + 3 A/B variants)
 ```
 
-### Step 2: Check what's running
+If any are missing, the naming might differ. The harness expects `wankle-cheat-vXX.user.js`. Rename if needed:
 ```bash
-ps -ef | grep -E "(wrapper|watchdog.py|manifest-updater.py|backup-manager.py|anomaly-detector.py|generic-trials|git-backup)" | grep -v grep
+cd /home/z/my-project/download/
+for f in v*.user.js; do
+  if [[ "$f" != wankle-cheat-* ]]; then
+    mv "$f" "wankle-cheat-$f"
+  fi
+done
 ```
 
-### Step 3: If nothing running, launch everything
-```bash
-# Restore webgpu-polyfill (harness needs it)
-cp /home/z/my-project/download/webgpu-polyfill.js /tmp/webgpu-polyfill.js
+### 3b. Launch the 4 infrastructure processes + git-backup
 
-# Launch all 4 infrastructure processes + git-backup
+```bash
 setsid -f bash /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh > /dev/null 2>&1 < /dev/null
 setsid -f bash /home/z/my-project/scripts/cheat-tests/manifest-updater-wrapper.sh > /dev/null 2>&1 < /dev/null
 setsid -f bash /home/z/my-project/scripts/cheat-tests/backup-manager-wrapper.sh > /dev/null 2>&1 < /dev/null
@@ -173,7 +187,10 @@ setsid -f bash /home/z/my-project/scripts/cheat-tests/anomaly-detector-wrapper.s
 setsid -f bash -c 'while true; do /home/z/agent-ctx/git-backup.sh; sleep 300; done' > /dev/null 2>&1 < /dev/null
 ```
 
-### Step 4: Verify watchdog is monitoring the right versions
+### 3c. Verify watchdog is monitoring the right versions
+
+The watchdog-wrapper.sh should monitor v24, v25, v27 (the contenders still in progress). Check:
+
 ```bash
 ps -ef | grep "watchdog.py" | grep -v grep
 # Should show: watchdog.py v24 v25 v27 --trials 30 --duration 90
@@ -188,8 +205,10 @@ sleep 3
 setsid -f bash /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh > /dev/null 2>&1 < /dev/null
 ```
 
-### Step 5: Wait 2 min, verify trials are producing new data
+### 3d. Wait 2 min, verify trials are producing new data
+
 ```bash
+sleep 120
 for v in v24 v25 v27; do
   CSV=/home/z/my-project/scripts/cheat-tests/parallel-${v}-results.csv
   TRIALS=$(($(wc -l < $CSV 2>/dev/null) - 1))
@@ -206,13 +225,14 @@ done
 
 ---
 
-## MONITORING BEHAVIOR (IMPORTANT)
+## STEP 4: MONITOR (YOUR MAIN JOB)
 
-The previous agent stayed running for 6+ hours, checking every ~5 minutes. Between checks it created ASCII art to fill the time. **You should do the same:**
+Stay running. Check every ~5 minutes. Between checks, create ASCII art.
 
-1. **Check every 5 minutes:**
+### Check command:
 ```bash
-date; cat /home/z/agent-ctx/trial-manifest.json | python3 -c "
+date
+cat /home/z/agent-ctx/trial-manifest.json | python3 -c "
 import json, sys
 m = json.load(sys.stdin)
 pct = 100*m['trialsCompleted']/m['trialsTotal']
@@ -224,38 +244,75 @@ for v, d in m['perVersion'].items():
 ps -ef | grep -E "(wrapper|watchdog.py|manifest-updater.py|backup-manager.py|anomaly-detector.py|generic-trials|git-backup)" | grep -v grep | wc -l
 ```
 
-2. **Between checks: create ASCII art.** Be creative — don't repeat. Themes used so far: dice, tanks, boats/armada, rockets, pyramids, skyscrapers, waterfalls, constellations, mountains, trains, tornado, braille rain, bar charts, burning joint. Find NEW metaphors.
+### ASCII art tradition:
 
-3. **At major milestones, create BIG murals** (30+ lines):
-   - **675 trials** = halfway mural (1350/2)
-   - **710 trials** = **DAB MURAL** (oil rig themed — user specifically requested this)
-   - **900 trials** = baselines + contenders complete
-   - **1350 trials** = final armada reaches shore
-   - Save murals to `/home/z/agent-ctx/ascii-art/` with descriptive filenames
+The previous agent created ASCII art between checks to fill time. **Continue this tradition.** See `ascii-art/README.md` for the full mural schedule + style notes. Key points:
 
-4. **Always include in checks:** trial count, percentage, process count (expect ~12-15), per-version progress bars
+- **Between checks:** small creative doodles (5-15 lines). Don't repeat — find new metaphors.
+- **At milestones:** BIG murals (30+ lines), save to `ascii-art/` with descriptive filenames.
+- **Upcoming milestones:**
+  - **675 trials** = halfway mural (1350/2)
+  - **710 trials** = **DAB MURAL** (oil rig themed — user specifically requested this)
+  - **900 trials** = baselines + contenders complete
+  - **1350 trials** = final armada reaches shore
 
-5. **If processes die:** relaunch immediately using the commands above. Don't wait.
+Themes already used (find NEW ones): dice, tanks, boats/armada, rockets, pyramids, skyscrapers, waterfalls, constellations, mountains, trains, tornado, braille rain, bar charts, burning joint, dice cups, dice tower.
 
-6. **If Bash tool times out repeatedly:** tell the user to restart the session, but the infrastructure is autonomous — it'll keep running.
+### If processes die:
+
+Relaunch immediately using the commands in Step 3b. Don't wait. The `setsid -f` ensures they survive shell exit.
+
+### If Bash tool times out repeatedly:
+
+Tell the user to restart the session. But the infrastructure is autonomous — it'll keep running. The git-backup pushes every 5 min so no data is lost.
 
 ---
 
-## A/B VARIANT DETAILS
+## INFRASTRUCTURE DETAILS
 
-When v24, v25, v27 all hit 150/150, the watchdog auto-launches 3 A/B variants:
+### 4 independent processes (each auto-restarts via bash wrapper):
 
-| Variant | Modification | File |
+1. **watchdog.py** — monitors drivers, restarts if dead/hung, **auto-launches A/B variants when v24+v25+v27 all hit 150/150**
+2. **manifest-updater.py** — writes `trial-manifest.json` + appends to `trials.jsonl` every 30s
+3. **backup-manager.py** — backups every 30 trials per version (retains last 3) + pre-switch backup on completion
+4. **anomaly-detector.py** — scans CSVs every 60s for bad trials (K=0 D=0 dead, missing JSONL, NaN FPS), removes for re-run (max 3 retries)
+
+Plus:
+- **git-backup.sh** — pushes to GitHub every 5 min (runs in a loop)
+- **generic-trials.sh** — one per version, runs trials sequentially (launched by watchdog)
+
+### Heartbeat system:
+Each driver writes a heartbeat file every 10s: `parallel-<ver>-heartbeat`. If heartbeat stalled >30s AND driver process alive → driver is hung → watchdog kills + restarts it.
+
+---
+
+## A/B VARIANTS (auto-launch when contenders complete)
+
+When v24, v25, v27 all hit 150/150, the watchdog auto-launches:
+
+| Variant | Modification | Cheat file |
 |---|---|---|
-| v27-no-pathguard | Path-segment guard disabled (crossCount forced to 0) | `wankle-cheat-v27-no-pathguard.user.js` |
-| v27-cap-pred8 | Predicted shells capped at 8 (`predictedShells.slice(0, 8)`) | `wankle-cheat-v27-cap-pred8.user.js` |
-| v27-mag045 | Magnetize threshold 0.35→0.45 | `wankle-cheat-v27-mag045.user.js` |
+| v27-no-pathguard | Path-segment guard disabled (crossCount forced to 0) | `cheat-versions/v27-no-pathguard.user.js` |
+| v27-cap-pred8 | Predicted shells capped at 8 (`predictedShells.slice(0, 8)`) | `cheat-versions/v27-cap-pred8.user.js` |
+| v27-mag045 | Magnetize threshold 0.35→0.45 | `cheat-versions/v27-mag045.user.js` |
 
 All 3 are based on v27 with a single-change patch. The watchdog adds them to its monitoring list automatically.
 
 ---
 
-## CHEAT VERSION HISTORY (for context)
+## MAPS
+
+| Code | Map name | Mode | Level ID | Notes |
+|---|---|---|---|---|
+| CA | Custom Arena | survival | `custom-c2738ec4-135` | open map, 6-7 enemies |
+| RK | RK Fight | survival | `custom-c69c5ff7-f4e` | wall-dense, bank shots |
+| Dun | Dungeon | survival | `custom-a6b7c90f-813` | small map, corner deaths |
+| DT-off | Dodge Training (aimbot OFF) | campaign | `custom-5f697a3b-742` | 72 enemies, pure dodge test |
+| DT-on | Dodge Training (aimbot ON) | campaign | `custom-5f697a3b-742` | 72 enemies, realistic (fire-stun) |
+
+---
+
+## CHEAT VERSION HISTORY
 
 - **v19** — earliest simple version, minimal dodge complexity
 - **v21.7** — pre-cold-spot, simple vector dodge ("works great" reference)
@@ -265,27 +322,23 @@ All 3 are based on v27 with a single-change patch. The watchdog adds them to its
 - **v26** — v25 + Tier-2 prediction engine + randomized safe-direction (intermediate, not in trial suite)
 - **v27** — v25-opt (slimmed) + v26's features properly ported + dead-code cuts
 
-### v27 bug fixes applied:
+### v27 bug fixes applied (already in the cheat file):
 1. **Fire decision broken** — `shellsInFlight` was undefined in canFire check. Fixed: re-added `var shellsInFlight = myShells;`
-2. **Pattern memory silently dead** — typo in prediction engine (`h.length - 2]` instead of `h[h.length - 2]`). Fixed.
+2. **Pattern memory silently dead** — typo in prediction engine. Fixed.
 
 ---
 
-## MAPS
+## WINNER DECLARATION (when all 1350 trials done)
 
-| Code | Map name | Mode | Notes |
-|---|---|---|---|
-| CA | Custom Arena | survival | open map, 6-7 enemies |
-| RK | RK Fight | survival | wall-dense, bank shots |
-| Dun | Dungeon | survival | small map, corner deaths |
-| DT-off | Dodge Training (aimbot OFF) | campaign | 72 enemies, pure dodge test |
-| DT-on | Dodge Training (aimbot ON) | campaign | 72 enemies, realistic (fire-stun) |
+From the user's original plan:
+- 95% confidence intervals don't overlap with baseline
+- Effect size > baseline's standard deviation
+- Difference reproduces across all 5 maps (not just one)
 
-Level IDs:
-- Custom Arena: `custom-c2738ec4-135`
-- RK Fight: `custom-c69c5ff7-f4e`
-- Dungeon: `custom-a6b7c90f-813`
-- Dodge Training: `custom-5f697a3b-742`
+When all 1350 trials complete:
+1. Build comparison charts (matplotlib, see `harness/build-strength-charts.py` for reference)
+2. Declare the winner based on the criteria above
+3. Save charts to `trial-data/charts/` and commit to GitHub
 
 ---
 
@@ -298,30 +351,13 @@ Level IDs:
 5. **Telemetry backfill is safe to run anytime** — `python3 /home/z/my-project/scripts/cheat-tests/telemetry-backfill.py`
 6. **Git backup runs every 5 min automatically** — don't interfere unless it's broken.
 7. **Stay running.** The user wants you to monitor continuously, create ASCII art between checks, and only stop when trials are done.
-8. **When trials complete (1350/1350)** — make MASS charts comparing all versions, declare winner based on 95% confidence intervals.
+8. **When trials complete (1350/1350)** — make MASS charts comparing all versions, declare winner, commit to GitHub.
 
 ---
 
-## WINNER DECLARATION CRITERIA
+## QUICK SANITY CHECK
 
-From the user's original plan:
-- 95% confidence intervals don't overlap with baseline
-- Effect size > baseline's standard deviation
-- Difference reproduces across all 5 maps (not just one)
-
-When all 1350 trials are done, build comparison charts and declare the winner.
-
----
-
-## ASCII ART REFERENCE
-
-See `/home/z/agent-ctx/ascii-art/` for all previous murals + doodles. Read the `README.md` there for the mural schedule and style notes. **Continue the tradition** — the user specifically wants creative, non-repeating ASCII art between checks, and themed murals at milestones.
-
----
-
-## QUICK SANITY CHECK COMMAND
-
-Run this first to verify everything is healthy:
+Run this first to verify everything is healthy after setup:
 ```bash
 date
 cat /home/z/agent-ctx/trial-manifest.json | python3 -c "
@@ -335,4 +371,4 @@ print(f'in progress: {m[\"versionsInProgress\"]}')
 ps -ef | grep -E "(wrapper|watchdog.py|manifest-updater.py|backup-manager.py|anomaly-detector.py|generic-trials|git-backup)" | grep -v grep | wc -l
 ```
 
-If trials < 1350 and processes = 0, launch everything per "HOW TO RESUME" above.
+If trials < 1350 and processes = 0, launch everything per Step 3.

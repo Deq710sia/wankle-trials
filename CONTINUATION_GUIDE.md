@@ -1,41 +1,61 @@
 # Trial Infrastructure — Continuation Guide
 
+**This document assumes you have already cloned the GitHub repo and followed `HANDOFF.md` Step 0-2.** All paths here are relative to the repo root OR to the working directories set up in HANDOFF.md Step 2.
+
 ## Architecture (4 independent processes)
 
 Each process is wrapped in a bash wrapper that auto-restarts it if it dies. All launched with `setsid -f` so they survive shell exit (PPID=1).
 
 ### Process 1: watchdog.py (MOST IMPORTANT — monitors drivers)
-- **Script:** `/home/z/my-project/scripts/cheat-tests/watchdog.py`
+- **Script (in repo):** `harness/watchdog.py`
+- **Script (working):** `/home/z/my-project/scripts/cheat-tests/watchdog.py`
 - **Wrapper:** `/home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh`
 - **Log:** `/home/z/my-project/scripts/cheat-tests/watchdog.log`
 - **Function:** Check drivers alive every 30s, restart if dead/hung (heartbeat stalled 30s+)
+- **Auto-launches A/B variants** when v24+v25+v27 all hit 150/150
 - **Does NOT touch:** manifest, telemetry, backups
 
 ### Process 2: manifest-updater.py (writes manifest + trials.jsonl)
-- **Script:** `/home/z/my-project/scripts/cheat-tests/manifest-updater.py`
+- **Script (in repo):** `harness/manifest-updater.py`
+- **Script (working):** `/home/z/my-project/scripts/cheat-tests/manifest-updater.py`
 - **Wrapper:** `/home/z/my-project/scripts/cheat-tests/manifest-updater-wrapper.sh`
 - **Log:** `/home/z/my-project/scripts/cheat-tests/manifest-updater.log`
 - **Function:** Every 30s, count trials in CSVs, write manifest, append new trials to trials.jsonl with summary metrics
 - **Does NOT generate telemetry files**
 
 ### Process 3: backup-manager.py (backups + retention)
-- **Script:** `/home/z/my-project/scripts/cheat-tests/backup-manager.py`
+- **Script (in repo):** `harness/backup-manager.py`
+- **Script (working):** `/home/z/my-project/scripts/cheat-tests/backup-manager.py`
 - **Wrapper:** `/home/z/my-project/scripts/cheat-tests/backup-manager-wrapper.sh`
 - **Log:** `/home/z/my-project/scripts/cheat-tests/backup-manager.log`
 - **Function:** Every 30s, check trial counts; backup at every 30-trial milestone + pre-switch on completion; retain last 3
 
-### Process 4: telemetry-backfill.py (ONE-SHOT, run as needed)
-- **Script:** `/home/z/my-project/scripts/cheat-tests/telemetry-backfill.py`
+### Process 4: anomaly-detector.py (scans for bad trials)
+- **Script (in repo):** `harness/anomaly-detector.py`
+- **Script (working):** `/home/z/my-project/scripts/cheat-tests/anomaly-detector.py`
+- **Wrapper:** `/home/z/my-project/scripts/cheat-tests/anomaly-detector-wrapper.sh`
+- **Log:** `/home/z/my-project/scripts/cheat-tests/anomaly-detector.log`
+- **Function:** Every 60s, scan CSVs for anomalies (K=0 D=0 dead in survival, missing JSONL, NaN FPS, etc.). Remove anomalous rows so drivers re-run them. Max 3 retries per trial.
+
+### Process 5: telemetry-backfill.py (ONE-SHOT, run as needed)
+- **Script (in repo):** `harness/telemetry-backfill.py`
+- **Script (working):** `/home/z/my-project/scripts/cheat-tests/telemetry-backfill.py`
 - **Log:** `/home/z/my-project/scripts/cheat-tests/telemetry-backfill.log`
 - **Function:** Scan trials.jsonl for entries with `telemetryFile=null`, generate Tier-1 telemetry files, update pointer in trials.jsonl
 - **Run periodically** (e.g., every hour) to catch up
 
+### Process 6: git-backup loop (every 5 min)
+- **Script (in repo):** `git-backup.sh`
+- **Script (working):** `/home/z/agent-ctx/git-backup.sh`
+- **Function:** Copy trial data from working dirs into repo, commit, push to GitHub
+- **Survives session end** because launched with `setsid -f`
+
 ## Single Source of Truth
 
-**`/home/z/agent-ctx/trial-manifest.json`** — read this FIRST when continuing.
+**`trial-manifest.json`** (in repo root) — read this FIRST when continuing.
 
 ```bash
-cat /home/z/agent-ctx/trial-manifest.json | python3 -m json.tool
+cat trial-manifest.json | python3 -m json.tool
 ```
 
 Key fields:
@@ -48,40 +68,27 @@ Key fields:
 ## How to check if everything is running
 
 ```bash
-ps -ef | grep -E "(wrapper.sh|watchdog.py|manifest-updater.py|backup-manager.py)" | grep -v grep
+ps -ef | grep -E "(wrapper|watchdog.py|manifest-updater.py|backup-manager.py|anomaly-detector.py|generic-trials|git-backup)" | grep -v grep | wc -l
+# Should show ~12-15 processes
 ```
 
-Should show 6 processes: 3 bash wrappers + 3 python scripts.
-
-If any are missing, relaunch the missing one:
-```bash
-setsid -f bash /home/z/my-project/scripts/cheat-tests/<missing>-wrapper.sh > /dev/null 2>&1 < /dev/null
-```
-
-## How to check trial progress
+## How to launch everything (if nothing running)
 
 ```bash
-# Quick count
-for v in v19 v21.7 v22.8 v24 v25 v27; do
-  CSV=/home/z/my-project/scripts/cheat-tests/parallel-${v}-results.csv
-  echo "$v: $(($(wc -l < $CSV 2>/dev/null) - 1)) / 150"
-done
+# Ensure webgpu-polyfill exists (browser harness needs it)
+ls /tmp/webgpu-polyfill.js || find /home/z/agent-ctx/ -name "webgpu-polyfill.js" -exec cp {} /tmp/webgpu-polyfill.js \;
 
-# Or read the manifest
-python3 -c "import json; m=json.load(open('/home/z/agent-ctx/trial-manifest.json')); print(f'{m[\"trialsCompleted\"]}/{m[\"trialsTotal\"]} trials, {len(m[\"versionsCompleted\"])} versions complete')"
+# Launch all 4 infrastructure processes + git-backup
+setsid -f bash /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh > /dev/null 2>&1 < /dev/null
+setsid -f bash /home/z/my-project/scripts/cheat-tests/manifest-updater-wrapper.sh > /dev/null 2>&1 < /dev/null
+setsid -f bash /home/z/my-project/scripts/cheat-tests/backup-manager-wrapper.sh > /dev/null 2>&1 < /dev/null
+setsid -f bash /home/z/my-project/scripts/cheat-tests/anomaly-detector-wrapper.sh > /dev/null 2>&1 < /dev/null
+setsid -f bash -c 'while true; do /home/z/agent-ctx/git-backup.sh; sleep 300; done' > /dev/null 2>&1 < /dev/null
 ```
 
-## How to run telemetry backfill (catch up on missing telemetry files)
+## How to start a new batch (e.g., A/B variants after contenders)
 
-```bash
-python3 /home/z/my-project/scripts/cheat-tests/telemetry-backfill.py
-```
-
-This is a one-shot — run it whenever you want to generate telemetry files for trials that don't have them yet. Safe to re-run.
-
-## How to start a new batch (e.g., contenders after baselines)
-
-When baselines (v19, v21.7, v22.8) are all complete:
+When v24, v25, v27 are all complete, the watchdog **auto-launches** the 3 A/B variants. You don't need to do anything. But if you need to manually launch a new batch:
 
 1. Kill the current watchdog wrapper:
 ```bash
@@ -89,44 +96,54 @@ pkill -f "watchdog-wrapper.sh"
 pkill -f "watchdog.py"
 ```
 
-2. Launch new watchdog with contender versions:
+2. Edit `watchdog-wrapper.sh` to use the new version list:
+```bash
+sed -i 's/v24 v25 v27/v27-no-pathguard v27-cap-pred8 v27-mag045/' /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh
+```
+
+3. Relaunch:
 ```bash
 setsid -f bash /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh > /dev/null 2>&1 < /dev/null
 ```
 
-But FIRST edit `watchdog-wrapper.sh` to use the new version list:
-```bash
-sed -i 's/v19 v21.7 v22.8/v24 v25 v27/' /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh
-```
+## File locations (working directories on VM)
 
-3. The manifest-updater and backup-manager don't need restarting — they already handle all 6 planned versions.
+### Source of truth (in repo, pushed to GitHub every 5 min)
+- `/home/z/agent-ctx/trial-manifest.json` — progress + file locations
+- `/home/z/agent-ctx/trials.jsonl` — all trial results, one JSON per line
+- `/home/z/agent-ctx/telemetry/{version}/{map}/trial-NNN.json` — per-trial frame data
+
+### Trial data (raw, in working dir)
+- `/home/z/my-project/scripts/cheat-tests/parallel-<ver>-results.csv` — per-version CSV
+- `/home/z/my-project/scripts/cheat-tests/parallel-<ver>-logs/` — per-version JSONL logs
+- `/home/z/my-project/scripts/cheat-tests/parallel-<ver>-heartbeat` — driver heartbeat (10s write)
+
+### Cheat versions
+- `/home/z/my-project/download/wankle-cheat-v*.user.js` — all versions
+
+### Infrastructure scripts
+- `/home/z/my-project/scripts/cheat-tests/*.py` — all Python scripts
+- `/home/z/my-project/scripts/cheat-tests/*.sh` — all shell scripts + wrappers
+
+### Backups
+- `/home/z/my-project/download/backups/trial-watchdog-backups/` — local backups (last 3 per version)
+- **GitHub repo** — offsite backup, pushed every 5 min by git-backup.sh
 
 ## Anomaly detection
 
-The watchdog does NOT do anomaly detection (kept bare-minimum). Anomaly detection is built into the harness itself: `generic-trials.sh` skips trials already in the CSV, so anomalous trials would need to be manually removed from the CSV to be re-run.
+The anomaly-detector scans for:
+- Survival mode + K=0 + D=0 + dead = immobile cheat bug
+- Missing JSONL file
+- NaN/zero FPS
+- Campaign mode + 0 deaths + few enemies = server didn't spawn bots
 
-If you need to re-run an anomalous trial:
-```bash
-# Find the trial row
-grep "^v19,5," /home/z/my-project/scripts/cheat-tests/parallel-v19-results.csv
-# Delete that row manually, then the next driver run will redo it
-```
-
-## File locations summary
-
-- Manifest: `/home/z/agent-ctx/trial-manifest.json`
-- Trials JSONL: `/home/z/agent-ctx/trials.jsonl`
-- Telemetry files: `/home/z/agent-ctx/telemetry/{version}/{map}/trial-{N:03d}.json`
-- Per-version CSVs: `/home/z/my-project/scripts/cheat-tests/parallel-{ver}-results.csv`
-- Per-version JSONL logs: `/home/z/my-project/scripts/cheat-tests/parallel-{ver}-logs/`
-- Backups: `/home/z/my-project/download/backups/trial-watchdog-backups/`
-- Process logs: `/home/z/my-project/scripts/cheat-tests/{watchdog,manifest-updater,backup-manager,telemetry-backfill}.log`
-- Wrapper auto-restart logs: `/home/z/my-project/scripts/cheat-tests/{watchdog,manifest-updater,backup-manager}-wrapper.log`
+Anomalous trials are removed from CSV + retried up to 3 times. After 3 retries, they're left in CSV with reason logged to `anomaly-log.jsonl`.
 
 ## Rules
 
 1. **The manifest is the single source of truth.** Read it first.
 2. **Never manually edit CSVs** unless re-running an anomalous trial.
 3. **Never kill the drivers** (generic-trials.sh) — only the watchdog should do that.
-4. **If a wrapper dies, relaunch with `setsid -f`** — that's the only way processes survive shell exit in this environment.
-5. **Telemetry backfill is safe to run anytime** — it only generates missing files.
+4. **If a wrapper dies, relaunch with `setsid -f`** — that's the only way processes survive shell exit.
+5. **Telemetry backfill is safe to run anytime** — `python3 /home/z/my-project/scripts/cheat-tests/telemetry-backfill.py`
+6. **Git backup runs every 5 min automatically** — don't interfere unless it's broken.
