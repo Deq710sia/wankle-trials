@@ -1,6 +1,6 @@
 {
-  "lastUpdated": "2026-06-20T11:26:16.589338+00:00",
-  "watchdogPid": 19660,
+  "lastUpdated": "2026-06-20T16:53:33.476322+00:00",
+  "watchdogPid": 3134,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
   "anomalyLogPath": "/home/z/my-project/scripts/cheat-tests/anomaly-log.jsonl",
@@ -98,20 +98,15 @@
     }
   },
   "backupLocations": [
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v24-t60-20260620_112446",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v25-t60-20260620_110246",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v27-t30-20260620_105416",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v24-t30-20260620_103346",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v25-t30-20260620_101146",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-pre-switch-complete-20260620_100146",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t150-20260620_100146",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-pre-switch-complete-20260620_100016",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t150-20260620_100016",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-pre-switch-complete-20260620_100016",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t150-20260620_100016",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t120-20260620_091016",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t120-20260620_090916",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t120-20260620_090916"
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v27-t30-20260620_165303",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v25-t60-20260620_165303",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v24-t60-20260620_165303",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-pre-switch-complete-20260620_165303",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t150-20260620_165303",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-pre-switch-complete-20260620_165303",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t150-20260620_165303",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-pre-switch-complete-20260620_165303",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t150-20260620_165303"
   ],
   "plannedVersions": [
     "v19",

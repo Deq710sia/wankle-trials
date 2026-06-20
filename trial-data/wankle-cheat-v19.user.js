@@ -171,13 +171,6 @@ function applyProfile(name) {
 }
 applyProfile('Rage');
 
-// v27-baseline-patch: expose cfg + applyProfile on window for test harness
-window._wklCfg = cfg;
-window._wklApplyProfile = applyProfile;
-// Stubs for telemetry fields older versions don't populate (bot logger reads these)
-if (!window._wklDodgeDebug) window._wklDodgeDebug = { lastDodgeVec: null, shellCount: 0, realShellCount: 0, predictedShellCount: 0, guardViolated: false };
-if (!window._wklPathGuard) window._wklPathGuard = { crossesAny: false, crossCount: 0, rotation: 0, resolved: false, shellsChecked: 0 };
-
 // ═══════════════════════════════════════════════════════════════
 //  BANNER
 // ═══════════════════════════════════════════════════════════════
