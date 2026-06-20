@@ -240,13 +240,13 @@ ps -ef | grep "watchdog.py" | grep -v grep
 # Should show: watchdog.py v24 v25 v27 --trials 30 --duration 90
 ```
 
-If it shows v19/v21.7/v22.8 (baselines already done), fix the wrapper:
+The watchdog-wrapper.sh monitors ALL 6 versions: `v19 v21.7 v22.8 v24 v25 v27`.
+This is intentional — baselines need hunter-bot trial reruns (RK Fight + Dungeon had incomplete telemetry), so the watchdog must monitor them too. The watchdog auto-launches A/B variants when v24+v25+v27 all hit 150/150.
+
+If the wrapper shows a different version list, fix it:
 ```bash
-sed -i 's/v19 v21.7 v22.8/v24 v25 v27/' /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh
-pkill -f "watchdog-wrapper.sh"
-pkill -f "watchdog.py v19"
-sleep 3
-setsid -f bash /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh > /dev/null 2>&1 < /dev/null
+sed -i 's/v19 v21.7 v22.8 v24 v25 v27/v19 v21.7 v22.8 v24 v25 v27/' /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh
+# (this is a no-op if already correct — the 6-version list is intentional)
 ```
 
 ### 3d. Wait 2 min, verify trials are producing new data
@@ -489,13 +489,11 @@ The passive-bot.js and passive-nofire-bot.js are CORRECT — they have all field
 
 ### Fix steps (DO THIS BEFORE LAUNCHING TRIALS)
 
-1. **Fix hunter-bot-v3.js** — Add the missing telemetry fields to the sample logging block (around line 684). Copy the field list from passive-bot.js's sample output. The fields to add:
-   - `dodgeMoveX`, `dodgeMoveZ`, `dodgeUrgency` (already has urgency)
-   - `realShells`, `predictedShells`
-   - `pathGuardCrosses`, `pathGuardRotation`, `pathGuardResolved`, `pathGuardShells`
-   - `coldSpotReactive`, `coldSpotStrategic`
-   - `guardViolated`
-   - `aliveTimeS`, `dodgeDurationS`, `nearestShellETA`
+1. **Fix hunter-bot-v3.js** — Run the provided patch script:
+   ```bash
+   bash /home/z/my-project/scripts/cheat-tests/fix-hunter-bot-telemetry.patch.sh
+   ```
+   This adds 11 missing telemetry fields to the hunter bot's sample output. The bot already READS the data (lines 94-120) but never WROTE it to samples. The patch script handles everything automatically (backup, patch, verify syntax). See `harness/fix-hunter-bot-telemetry.patch.sh` in the repo for the exact code.
 
 2. **MOVE (do NOT delete) all hunter-bot trial data to archive** — Preserve the incomplete data in case it's useful later. The kill/death/wave/survival data IS valid — only the dodge telemetry fields are missing.
    ```bash
