@@ -34,7 +34,8 @@ ANOMALY_LOG = CHEAT_DIR / 'anomaly-log.jsonl'
 WATCHDOG_LOG = CHEAT_DIR / 'watchdog.log'
 MANIFEST_UPDATER_LOG = CHEAT_DIR / 'manifest-updater.log'
 
-ALL_PLANNED_VERSIONS = ['v19', 'v21.7', 'v22.8', 'v24', 'v25', 'v27']
+ALL_PLANNED_VERSIONS = ['v19', 'v21.7', 'v22.8', 'v24', 'v25', 'v27',
+                          'v27-no-pathguard', 'v27-cap-pred8', 'v27-mag045']
 TARGET_PER_VERSION = 150
 
 MAP_NAMES = {
