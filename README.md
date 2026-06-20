@@ -1,127 +1,104 @@
 # Wankle3D Cheat Trials
 
-Trial infrastructure for A/B testing Wankle3D cheat versions against bot fleets.
+Trial infrastructure for A/B testing Wankle3D (wanshot.lol) cheat versions v19→v27 plus 3 A/B variants of v27, against bot fleets across 5 maps.
 
-## Quick Navigation
+**For setup, monitoring, troubleshooting, and winner declaration, see [`CONTINUATION_GUIDE.md`](./CONTINUATION_GUIDE.md).** It is the single handoff + prompt document — read it first when picking up this trial suite.
 
-| Looking for... | Go to... |
-|---|---|
-| **v27 (current contender)** | `cheat-versions/v27.user.js` |
-| **All cheat versions v19→v27** | `cheat-versions/` |
-| **Trial results summary** | `trial-data/trials.jsonl` (one line per trial) |
-| **Progress manifest** | `trial-data/trial-manifest.json` |
-| **Per-trial frame data** | `trial-data/telemetry/{version}/{map}/trial-NNN.json` |
-| **Test infrastructure scripts** | `harness/` |
-| **Bot scripts (passive/hunter)** | `bots/` |
-| **Drop-in code snippets** | `snippets/` |
-| **Continuation guide** | `docs/CONTINUATION_GUIDE.md` |
+## TL;DR
+
+- **Total target:** 9 versions × 150 trials = 1350 trials
+- **Current state:** 632/1350 done. Baselines v19/v21.7/v22.8 "complete" but their **RK Fight + Dungeon trials (hunter bot) need rerunning** because `hunter-bot-v3.js` was missing 11 telemetry fields. Verified count of trials to rerun: **262** (matches across raw JSONL logs, CSVs, and `trials.jsonl`).
+- **Critical pre-launch step:** run `bash fix-hunter-bot-telemetry.patch.sh` — patches the hunter bot, auto-archives 262 incomplete trials (MOVE, not delete), triggers the field validator. See `CONTINUATION_GUIDE.md` Step 3.
 
 ## Directory Structure
 
 ```
 wankle-trials/
-├── README.md                    ← you are here
-├── cheat-versions/              ← all cheat .user.js files (v19 → v27)
-│   ├── v27.user.js              ← CURRENT CONTENDER (v25 + magnetize fix + Tier-2 prediction)
-│   ├── v25.user.js              ← path-segment guard + 360° dodge + burst fire
-│   ├── v24.user.js              ← pre-magnetize-fix baseline
-│   ├── v22.8.user.js            ← baseline (cold-spot + per-shell vector dodge)
-│   ├── v21.7.user.js            ← baseline (pre-cold-spot, simple vector dodge)
-│   ├── v19.user.js              ← earliest simple version
-│   └── ... (all versions v19-v27)
-├── snippets/                    ← drop-in code blocks for porting into cheat versions
-│   ├── prediction-engine-snippet.js   ← Tier 1+2 leadAim rewrite
-│   ├── dodge-magnetize-fix.js         ← root-cause fix for "moves toward bullets"
-│   └── iteration-agent-prompt.md      ← design doc for v26/v27 changes
-├── harness/                     ← test infrastructure (scripts)
-│   ├── generic-trials.sh        ← main trial driver (one version, N trials)
-│   ├── survival-showdown-parallel.sh  ← per-trial harness (browser + inject + run)
-│   ├── watchdog.py              ← bare-minimum driver monitor (restart on death)
-│   ├── manifest-updater.py      ← writes trial-manifest.json + trials.jsonl
-│   ├── backup-manager.py        ← backups + retention (every 30 trials)
-│   ├── anomaly-detector.py      ← scans for bad trials, removes for re-run
-│   ├── telemetry-backfill.py    ← generates missing Tier-1 telemetry files
-│   ├── telemetry-writer.py      ← converts JSONL log → Tier-1 telemetry JSON
-│   └── ... (analysis scripts, chart builders, old harness versions)
+├── README.md                    ← you are here (slim overview)
+├── CONTINUATION_GUIDE.md        ← THE handoff + prompt doc — start here
+├── trial-manifest.json          ← current progress (derived; raw logs are source of truth)
+├── trials.jsonl                 ← all trial results, one JSON per line (derived)
+├── git-backup.sh                ← auto-push to GitHub every 5 min
+├── webgpu-polyfill.js           ← MUST be copied to /tmp/ before trials (see Guide Step 2)
+├── cheat-versions/              ← all cheat .user.js files
+│   ├── v19.user.js              ← baselines
+│   ├── v21.7.user.js
+│   ├── v22.8.user.js
+│   ├── v24.user.js              ← contenders (in progress)
+│   ├── v25.user.js
+│   ├── v27.user.js
+│   ├── wankle-cheat-v27-no-pathguard.user.js   ← A/B variants (already prefixed)
+│   ├── wankle-cheat-v27-cap-pred8.user.js
+│   ├── wankle-cheat-v27-mag045.user.js
+│   └── (intermediate versions v22.0–v22.7, v23, v26 — historical, not in active trial suite)
+├── snippets/                    ← drop-in code blocks for porting into cheats
+├── harness/                     ← all infrastructure scripts (Python + bash)
+│   ├── generic-trials.sh        ← one driver per version, runs trials sequentially
+│   ├── survival-showdown-parallel.sh ← per-trial browser harness
+│   ├── watchdog.py + wrapper    ← monitors drivers, auto-launches A/B
+│   ├── manifest-updater.py + wrapper
+│   ├── backup-manager.py + wrapper
+│   ├── anomaly-detector.py + wrapper ← scans for bad trials + telemetry field gaps
+│   ├── telemetry-field-validator.py + wrapper ← parses bot source → expected fields
+│   ├── telemetry-backfill.py    ← one-shot: generate missing per-trial telemetry JSON
+│   ├── fix-hunter-bot-telemetry.patch.sh ← patches hunter bot + auto-archives
+│   └── (analysis + chart scripts)
 ├── bots/                        ← bot scripts that drive the player tank
-│   ├── passive-bot.js           ← passive bot (fires only for respawn, logs telemetry)
-│   ├── passive-nofire-bot.js    ← pure dodge bot (never fires)
-│   ├── hunter-bot-v3.js         ← aggressive hunter bot
-│   └── human-bot.js             ← human-like bot
-├── trial-data/                  ← THE RESULTS
-│   ├── trials.jsonl             ← summary JSONL (one line per trial) — MOST IMPORTANT
-│   ├── trial-manifest.json      ← progress tracking (single source of truth)
-│   ├── csvs/                    ← per-version CSV files (raw trial rows)
-│   ├── logs/                    ← per-version JSONL logs (frame-by-frame samples)
-│   └── telemetry/               ← Tier-1 telemetry files (per-trial JSON with frame data)
-├── docs/
-│   └── CONTINUATION_GUIDE.md    ← how to resume if context resets
-├── archive/                     ← legacy/duplicate files (don't rely on these)
-├── git-backup.sh                ← auto-pushes to GitHub every 5 min
+│   ├── passive-bot.js           ← ✅ patched — all 11 telemetry fields present
+│   ├── passive-nofire-bot.js    ← ✅ patched
+│   ├── hunter-bot-v3.js         ← ❌ UNPATCHED — run patch script before trials
+│   ├── human-bot.js
+│   └── test-bot-v2.js
+├── trial-data/                  ← THE RESULTS (also pushed to GitHub)
+│   ├── trials.jsonl             ← summary (one line per trial)
+│   ├── trial-manifest.json
+│   ├── csvs/                    ← per-version CSV files
+│   ├── logs/                    ← per-version JSONL logs (frame-by-frame) — SOURCE OF TRUTH
+│   └── telemetry/               ← per-trial telemetry JSON (generated by backfill)
+├── ascii-art/                   ← monitoring doodles + milestone murals (see its README)
+├── docs/                        ← (legacy — kept empty after unification)
+├── archive/                     ← legacy/incomplete data — never delete, always move here
 └── .gitignore
 ```
 
-## Trial Plan (Current)
-
-**Phase 1 — Baselines (running now):**
-- v19, v21.7, v22.8 × 30 trials × 5 maps = 450 trials
-
-**Phase 2 — Contenders (after baselines):**
-- v24, v25, v27 × 30 trials × 5 maps = 450 trials
-
-**Phase 3 — A/B variants (if v27 wins):**
-- v27 + path-guard disabled
-- v27 + predicted-shell cap at 8
-- v27 + magnetize threshold 0.35→0.45
-
-**Total: 900-1350 trials, ~6-12 hours wall clock**
-
 ## Maps
 
-| Code | Map name | Mode | Notes |
-|---|---|---|---|
-| CA | Custom Arena | survival | open map, 6-7 enemies |
-| RK | RK Fight | survival | wall-dense, bank shots |
-| Dun | Dungeon | survival | small map, corner deaths |
-| DT-off | Dodge Training (aimbot OFF) | campaign | 72 enemies, pure dodge test |
-| DT-on | Dodge Training (aimbot ON) | campaign | 72 enemies, realistic (fire-stun) |
+| Code | Map name | Mode | Level ID | Bot | Notes |
+|---|---|---|---|---|---|
+| CA | Custom Arena | survival | `custom-c2738ec4-135` | passive-bot | open map, 6-7 enemies |
+| RK | RK Fight | survival | `custom-c69c5ff7-f4e` | hunter-bot-v3 | wall-dense, bank shots — **needs rerun** |
+| Dun | Dungeon | survival | `custom-a6b7c90f-813` | hunter-bot-v3 | small map, corner deaths — **needs rerun** |
+| DT-off | Dodge Training (aimbot OFF) | campaign | `custom-5f697a3b-742` | passive-nofire-bot | 72 enemies, pure dodge test |
+| DT-on | Dodge Training (aimbot ON) | campaign | `custom-5f697a3b-742` | passive-bot | 72 enemies, realistic (fire-stun) |
 
-## Running Infrastructure
+## Cheat Version History
 
-4 independent processes (each auto-restarts via bash wrapper):
+- **v19** — earliest simple version, minimal dodge complexity
+- **v21.7** — pre-cold-spot, simple vector dodge ("works great" reference)
+- **v22.8** — cold-spot + per-shell vector dodge
+- **v24** — last version before magnetize fix
+- **v25** — magnetize fix + path-guard + 360° dodge + burst fire + no stickiness
+- **v26** — v25 + Tier-2 prediction + randomized safe-direction (intermediate, not in active trial suite)
+- **v27** — v25-opt (slimmed) + v26's features properly ported + dead-code cuts
 
-1. **watchdog.py** — monitors drivers, restarts if dead/hung
-2. **manifest-updater.py** — writes manifest + trials.jsonl every 30s
-3. **backup-manager.py** — backups every 30 trials + pre-switch on completion
-4. **anomaly-detector.py** — scans for bad trials every 60s, removes for re-run
+**A/B variants of v27** (single-change patches, auto-launched by watchdog when v24+v25+v27 all hit 150/150):
 
-Plus:
-- **git-backup.sh** — pushes to GitHub every 5 min
-- **generic-trials.sh** — one per version, runs trials sequentially
+| Variant | Modification |
+|---|---|
+| `v27-no-pathguard` | Path-segment guard disabled (`crossCount` forced to 0) |
+| `v27-cap-pred8` | Predicted shells capped at 8 (`predictedShells.slice(0, 8)`) |
+| `v27-mag045` | Magnetize threshold 0.35→0.45 |
+
+## Rules (short — see CONTINUATION_GUIDE.md for full rules)
+
+1. **Raw JSONL logs are the source of truth.** Manifest, CSVs, `trials.jsonl`, telemetry JSON are all derived.
+2. **Archive, don't delete.** Move incomplete data to `archive/`.
+3. **Never manually edit CSVs** unless re-running an anomalous trial.
+4. **Never kill drivers** (`generic-trials.sh`) — only the watchdog should.
+5. **If a wrapper dies**, relaunch with `setsid -f` (only way processes survive shell exit).
+6. **Test before trusting.** After patching any bot, run ONE trial manually and inspect the JSONL output. A 90-second test saves 9 hours of reruns.
+7. **The user catches mistakes.** Be honest about what you find, even if it's bad news.
 
 ## GitHub Repo
 
-`https://github.com/Deq710sia/wankle-trials` (private)
-
-Auto-pushed every 5 minutes by `git-backup.sh`. Even if the VM dies, you lose at most 5 minutes of data.
-
-## Known Issues (read before starting)
-
-1. **Telemetry gap:** 533 of 638 trials have `telemetryFile=null` in trials.jsonl. Run `python3 harness/telemetry-backfill.py` once after setup to generate the missing per-trial telemetry JSON files. See HANDOFF.md Step 3a-ter.
-
-2. **webgpu-polyfill.js:** This file is in the repo root and MUST be copied to `/tmp/webgpu-polyfill.js` before starting trials. Without it, the browser harness fails to load Wankle3D and all trials produce K=0 D=0 (immobile cheat bug). See HANDOFF.md Step 3a-bis.
-
-3. **watchdog-wrapper.sh version list:** The wrapper monitors `v24 v25 v27` (contenders still in progress). If you need to change which versions are monitored (e.g., after contenders complete), edit the wrapper and restart. See HANDOFF.md Step 3c.
-
-4. **HUNTER-BOT TELEMETRY GAP (CRITICAL):** The `hunter-bot-v3.js` is missing dodge telemetry fields (realShells, predictedShells, pathGuardCrosses, dodgeMoveX/Z) in its sample output. 262 existing trials (RK Fight + Dungeon) + 180 future A/B variant trials need (re)running with the fixed bot. See HANDOFF.md "CRITICAL: HUNTER-BOT TELEMETRY GAP" for fix steps.
-
-5. **A/B variant auto-launch:** When v24+v25+v27 all hit 150/150, the watchdog auto-launches 3 A/B variants (v27-no-pathguard, v27-cap-pred8, v27-mag045). No manual intervention needed.
-
-## Key Files for New Session
-
-If your context resets, read these first:
-1. `HANDOFF.md` — complete setup + monitoring guide (START HERE)
-2. `trial-manifest.json` — current progress + file locations
-3. `CONTINUATION_GUIDE.md` — detailed infrastructure reference
-4. `trials.jsonl` — all trial results (one line per trial)
-5. `ascii-art/README.md` — mural schedule + style notes for monitoring art
+`https://github.com/Deq710sia/wankle-trials` (private). Auto-pushed every 5 minutes by `git-backup.sh`. Even if the VM dies, you lose at most 5 minutes of data.
