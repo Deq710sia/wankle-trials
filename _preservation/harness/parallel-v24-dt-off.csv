@@ -1,0 +1,2 @@
+version,trial,kills,deaths,wave,alive,hp,enemyCount,durationSec,avgFps,minFps,maxEnemies,botType,levelId,mode,aimbotOff,jsonlFile,corrBuckets
+v24,1,18,19,0,0,0,71,90,58.0,45.0,72,passive-nofire,custom-5f697a3b-742,campaign,1,,0
