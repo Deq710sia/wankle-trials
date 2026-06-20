@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-06-20T17:18:04.590151+00:00",
+  "lastUpdated": "2026-06-20T17:57:57.860540+00:00",
   "watchdogPid": 3134,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
@@ -21,7 +21,7 @@
     "v27-cap-pred8",
     "v27-mag045"
   ],
-  "trialsCompleted": 638,
+  "trialsCompleted": 632,
   "trialsTotal": 1350,
   "perVersion": {
     "v19": {
@@ -49,7 +49,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v22.8"
     },
     "v24": {
-      "completed": 62,
+      "completed": 60,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v24-results.csv",
@@ -57,7 +57,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v24"
     },
     "v25": {
-      "completed": 75,
+      "completed": 73,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v25-results.csv",
@@ -65,7 +65,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v25"
     },
     "v27": {
-      "completed": 51,
+      "completed": 49,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v27-results.csv",
@@ -121,5 +121,5 @@
   ],
   "targetPerVersion": 150,
   "continuationGuide": "/home/z/agent-ctx/CONTINUATION_GUIDE.md",
-  "note": "Single source of truth. Read this first to reconstruct state."
+  "note": "REBUILT from raw logs + CSVs. 632 trials verified. Hunter-bot telemetry gap documented in HANDOFF.md."
 }
