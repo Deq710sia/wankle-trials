@@ -93,11 +93,12 @@ wankle-trials/
 
 1. **Raw JSONL logs are the source of truth.** Manifest, CSVs, `trials.jsonl`, telemetry JSON are all derived.
 2. **Archive, don't delete.** Move incomplete data to `archive/`.
-3. **Never manually edit CSVs** unless re-running an anomalous trial.
-4. **Never kill drivers** (`generic-trials.sh`) — only the watchdog should.
-5. **If a wrapper dies**, relaunch with `setsid -f` (only way processes survive shell exit).
-6. **Test before trusting.** After patching any bot, run ONE trial manually and inspect the JSONL output. A 90-second test saves 9 hours of reruns.
-7. **The user catches mistakes.** Be honest about what you find, even if it's bad news.
+3. **No overwrites, just backup folders.** Before modifying any existing file in place, copy the original to a timestamped folder under `archive/` (e.g. `archive/pre-patch-<YYYYMMDD-HHMMSS>/`). Never overwrite without a folder backup.
+4. **Never manually edit CSVs** unless re-running an anomalous trial.
+5. **Never kill drivers** (`generic-trials.sh`) — only the watchdog should.
+6. **If a wrapper dies**, relaunch with `setsid -f` (only way processes survive shell exit).
+7. **Test before trusting.** After patching any bot, run ONE trial manually and inspect the JSONL output. A 90-second test saves 9 hours of reruns.
+8. **The user catches mistakes.** Be honest about what you find, even if it's bad news.
 
 ## GitHub Repo
 

@@ -529,6 +529,10 @@ They caught the hunter-bot gap. They caught the stale manifest. They caught the 
 
 Never delete data. Move it to `archive/`. You might need it later. The old hunter-bot trials still have valid kill/death data even without dodge telemetry.
 
+### 6b. NO OVERWRITES, JUST BACKUP FOLDERS
+
+When modifying ANY existing file in place — bot source, CSV, `trials.jsonl`, `expected-telemetry-fields.json`, anything — first copy the original to a **timestamped backup folder** under `archive/`, then modify. Never trust `.bak` sibling files alone; never overwrite without a folder backup. The patch script (`fix-hunter-bot-telemetry.patch.sh`) follows this rule: it creates `archive/pre-patch-<YYYYMMDD-HHMMSS>/` and copies the unpatched bot, the pre-modification CSVs, and the pre-modification `trials.jsonl` there before touching anything. Follow the same pattern for any future patch: backup folder first, edit second.
+
 ### 7. STAY RUNNING
 
 The user wants you to monitor continuously, create ASCII art between checks, and not stop until all 1350 trials are done. If the Bash tool times out, tell the user to restart — but the infrastructure keeps running autonomously.

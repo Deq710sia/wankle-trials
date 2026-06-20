@@ -5,17 +5,33 @@
 # The hunter bot already READS all telemetry into tb.last* variables (lines 94-120)
 # but never WRITES them to the sample output (line 684-688).
 # This patch adds the missing fields to the sample push.
+#
+# RULE: No overwrites. Every file that will be modified is FIRST copied to a
+# timestamped backup folder. Originals are never destroyed.
+
+set -u
 
 BOT=/home/z/my-project/scripts/cheat-tests/hunter-bot-v3.js
+WORK=/home/z/my-project/scripts/cheat-tests
+REPO=/home/z/agent-ctx
+
+# Timestamped backup folder for this run (created once, used everywhere)
+TS="$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="$REPO/archive/pre-patch-$TS"
+mkdir -p "$BACKUP_DIR"
+echo "Backup folder for this run: $BACKUP_DIR"
+echo "Every file modified by this script will be copied here first."
 
 # Check if already patched
 if grep -q "realShells" "$BOT" 2>/dev/null && grep -q "tb.lastRealShellCount" "$BOT" 2>/dev/null; then
   echo "hunter-bot-v3.js already has realShells in sample output — skipping patch"
+  echo "(backup folder still created at $BACKUP_DIR — empty, safe to remove)"
   exit 0
 fi
 
-# Backup
-cp "$BOT" "${BOT}.pre-patch.bak"
+# === Backup #1: hunter-bot-v3.js (before in-place edit) ===
+cp -p "$BOT" "$BACKUP_DIR/hunter-bot-v3.js"
+echo "Backed up: hunter-bot-v3.js"
 
 # The old sample output block ends with:
 #   dodgeActive: tb.lastDodgeActive, dodgeUrgency: tb.lastDodgeUrgency,
@@ -83,40 +99,61 @@ echo "telemetry fields now in sample output"
 node -c "$BOT" && echo "SYNTAX OK" || echo "SYNTAX ERROR"
 
 # === AUTO-ARCHIVE: move old hunter-bot trial data to archive ===
+# (MOVE, don't delete — these go to a separate archive folder, not the backup folder.
+#  Backup folder preserves pre-modification state of files we EDIT IN PLACE.
+#  Archive folder holds trial data we MOVE OUT of active trial locations.)
 echo ""
 echo "=== AUTO-ARCHIVING old hunter-bot data (MOVE, don't delete) ==="
-mkdir -p /home/z/agent-ctx/archive/incomplete-hunter-telemetry
+ARCHIVE_DIR="$REPO/archive/incomplete-hunter-telemetry"
+mkdir -p "$ARCHIVE_DIR"
 
 for v in v19 v21.7 v22.8 v24 v25 v27; do
   # Move JSONL logs
-  mkdir -p /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-logs
-  mv /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-c69c5ff7-f4e-t*.jsonl \
-     /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-logs/ 2>/dev/null
-  mv /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-a6b7c90f-813-t*.jsonl \
-     /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-logs/ 2>/dev/null
+  mkdir -p "$ARCHIVE_DIR/${v}-logs"
+  mv $WORK/parallel-${v}-logs/${v}-custom-c69c5ff7-f4e-t*.jsonl \
+     "$ARCHIVE_DIR/${v}-logs/" 2>/dev/null
+  mv $WORK/parallel-${v}-logs/${v}-custom-a6b7c90f-813-t*.jsonl \
+     "$ARCHIVE_DIR/${v}-logs/" 2>/dev/null
   # Move telemetry files
-  mkdir -p /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-telemetry
-  mv /home/z/agent-ctx/telemetry/${v}/RK/ \
-     /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-telemetry/ 2>/dev/null
-  mv /home/z/agent-ctx/telemetry/${v}/Dun/ \
-     /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-telemetry/ 2>/dev/null
-  # Archive CSV rows
-  CSV=/home/z/my-project/scripts/cheat-tests/parallel-${v}-results.csv
+  mkdir -p "$ARCHIVE_DIR/${v}-telemetry"
+  mv $REPO/telemetry/${v}/RK/ \
+     "$ARCHIVE_DIR/${v}-telemetry/" 2>/dev/null
+  mv $REPO/telemetry/${v}/Dun/ \
+     "$ARCHIVE_DIR/${v}-telemetry/" 2>/dev/null
+  # === Backup #2: CSV (before in-place modification) ===
+  CSV=$WORK/parallel-${v}-results.csv
   if [ -f "$CSV" ]; then
-    ARCHIVE_CSV=/home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-RK-Dun-results.csv
+    cp -p "$CSV" "$BACKUP_DIR/parallel-${v}-results.csv"
+    # Save RK+Dun rows to archive (this is preservation, not backup)
+    ARCHIVE_CSV="$ARCHIVE_DIR/${v}-RK-Dun-results.csv"
     head -1 "$CSV" > "$ARCHIVE_CSV" 2>/dev/null
     grep "custom-c69c5ff7-f4e\|custom-a6b7c90f-813" "$CSV" >> "$ARCHIVE_CSV" 2>/dev/null
+    # Write modified CSV to a tmp file, then atomically replace
     head -1 "$CSV" > "$CSV.tmp"
     grep -v "custom-c69c5ff7-f4e\|custom-a6b7c90f-813" "$CSV" >> "$CSV.tmp"
     mv "$CSV.tmp" "$CSV"
-    echo "  $v: archived $(($(wc -l < "$ARCHIVE_CSV") - 1)) rows, kept $(($(wc -l < "$CSV") - 1))"
+    echo "  $v: archived $(($(wc -l < "$ARCHIVE_CSV") - 1)) rows, kept $(($(wc -l < "$CSV") - 1)), original backed up to $BACKUP_DIR/"
   fi
 done
 
-# Archive trials.jsonl entries
+# === Backup #3: trials.jsonl (before in-place modification) ===
+if [ -f "$REPO/trials.jsonl" ]; then
+  cp -p "$REPO/trials.jsonl" "$BACKUP_DIR/trials.jsonl"
+  echo "Backed up: trials.jsonl"
+fi
+
+# Archive trials.jsonl entries (MOVE hunter-bot entries to archive file)
 python3 -c "
-import json
-with open('/home/z/agent-ctx/trials.jsonl') as f:
+import json, shutil, os
+from pathlib import Path
+
+repo = Path('$REPO')
+archive = Path('$ARCHIVE_DIR')
+backup = Path('$BACKUP_DIR')
+
+src = repo / 'trials.jsonl'
+# Original already backed up to $BACKUP_DIR above — safe to read + rewrite in place.
+with open(src) as f:
     lines = f.readlines()
 kept = []
 archived = []
@@ -126,22 +163,36 @@ for line in lines:
         archived.append(line)
     else:
         kept.append(line)
-with open('/home/z/agent-ctx/archive/incomplete-hunter-telemetry/trials-incomplete.jsonl', 'w') as f:
+# Preserve archived entries in archive file
+with open(archive / 'trials-incomplete.jsonl', 'w') as f:
     f.writelines(archived)
-with open('/home/z/agent-ctx/trials.jsonl', 'w') as f:
+# Rewrite active trials.jsonl in place (original is in backup folder)
+with open(src, 'w') as f:
     f.writelines(kept)
 print(f'Archived {len(archived)} entries, kept {len(kept)}')
+print(f'Original trials.jsonl preserved at: {backup / \"trials.jsonl\"}')
 "
 
 # === TRIGGER FIELD VALIDATOR: update expected-fields.json ===
 echo ""
 echo "=== Updating expected telemetry fields ==="
-python3 /home/z/my-project/scripts/cheat-tests/telemetry-field-validator.py 2>/dev/null || \
-  python3 /home/z/agent-ctx/harness/telemetry-field-validator.py 2>/dev/null || \
+# Back up existing expected-telemetry-fields.json if present
+if [ -f "$WORK/expected-telemetry-fields.json" ]; then
+  cp -p "$WORK/expected-telemetry-fields.json" "$BACKUP_DIR/expected-telemetry-fields.json"
+  echo "Backed up: expected-telemetry-fields.json"
+fi
+python3 "$WORK/telemetry-field-validator.py" 2>/dev/null || \
+  python3 "$REPO/harness/telemetry-field-validator.py" 2>/dev/null || \
   echo "WARNING: could not run telemetry-field-validator.py"
 
 echo ""
 echo "=== Patch + archive complete ==="
-echo "Old data preserved in: /home/z/agent-ctx/archive/incomplete-hunter-telemetry/"
+echo "Pre-modification originals preserved in: $BACKUP_DIR/"
+echo "  - hunter-bot-v3.js (unpatched)"
+echo "  - parallel-{v19,v21.7,v22.8,v24,v25,v27}-results.csv (with RK+Dun rows)"
+echo "  - trials.jsonl (with RK+Dun entries)"
+echo "  - expected-telemetry-fields.json (if it existed)"
+echo ""
+echo "Hunter-bot trial data (RK+Dun) moved to: $ARCHIVE_DIR/"
 echo "Hunter bot now writes all telemetry fields."
 echo "Anomaly detector will verify field completeness on every trial."
