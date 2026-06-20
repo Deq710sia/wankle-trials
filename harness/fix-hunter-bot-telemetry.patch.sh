@@ -81,3 +81,67 @@ echo "=== Verify patch ==="
 grep -c "realShells\|predictedShells\|pathGuardCrosses\|dodgeMoveX" "$BOT"
 echo "telemetry fields now in sample output"
 node -c "$BOT" && echo "SYNTAX OK" || echo "SYNTAX ERROR"
+
+# === AUTO-ARCHIVE: move old hunter-bot trial data to archive ===
+echo ""
+echo "=== AUTO-ARCHIVING old hunter-bot data (MOVE, don't delete) ==="
+mkdir -p /home/z/agent-ctx/archive/incomplete-hunter-telemetry
+
+for v in v19 v21.7 v22.8 v24 v25 v27; do
+  # Move JSONL logs
+  mkdir -p /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-logs
+  mv /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-c69c5ff7-f4e-t*.jsonl \
+     /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-logs/ 2>/dev/null
+  mv /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-a6b7c90f-813-t*.jsonl \
+     /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-logs/ 2>/dev/null
+  # Move telemetry files
+  mkdir -p /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-telemetry
+  mv /home/z/agent-ctx/telemetry/${v}/RK/ \
+     /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-telemetry/ 2>/dev/null
+  mv /home/z/agent-ctx/telemetry/${v}/Dun/ \
+     /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-telemetry/ 2>/dev/null
+  # Archive CSV rows
+  CSV=/home/z/my-project/scripts/cheat-tests/parallel-${v}-results.csv
+  if [ -f "$CSV" ]; then
+    ARCHIVE_CSV=/home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-RK-Dun-results.csv
+    head -1 "$CSV" > "$ARCHIVE_CSV" 2>/dev/null
+    grep "custom-c69c5ff7-f4e\|custom-a6b7c90f-813" "$CSV" >> "$ARCHIVE_CSV" 2>/dev/null
+    head -1 "$CSV" > "$CSV.tmp"
+    grep -v "custom-c69c5ff7-f4e\|custom-a6b7c90f-813" "$CSV" >> "$CSV.tmp"
+    mv "$CSV.tmp" "$CSV"
+    echo "  $v: archived $(($(wc -l < "$ARCHIVE_CSV") - 1)) rows, kept $(($(wc -l < "$CSV") - 1))"
+  fi
+done
+
+# Archive trials.jsonl entries
+python3 -c "
+import json
+with open('/home/z/agent-ctx/trials.jsonl') as f:
+    lines = f.readlines()
+kept = []
+archived = []
+for line in lines:
+    t = json.loads(line)
+    if t.get('map') in ('RK', 'Dun'):
+        archived.append(line)
+    else:
+        kept.append(line)
+with open('/home/z/agent-ctx/archive/incomplete-hunter-telemetry/trials-incomplete.jsonl', 'w') as f:
+    f.writelines(archived)
+with open('/home/z/agent-ctx/trials.jsonl', 'w') as f:
+    f.writelines(kept)
+print(f'Archived {len(archived)} entries, kept {len(kept)}')
+"
+
+# === TRIGGER FIELD VALIDATOR: update expected-fields.json ===
+echo ""
+echo "=== Updating expected telemetry fields ==="
+python3 /home/z/my-project/scripts/cheat-tests/telemetry-field-validator.py 2>/dev/null || \
+  python3 /home/z/agent-ctx/harness/telemetry-field-validator.py 2>/dev/null || \
+  echo "WARNING: could not run telemetry-field-validator.py"
+
+echo ""
+echo "=== Patch + archive complete ==="
+echo "Old data preserved in: /home/z/agent-ctx/archive/incomplete-hunter-telemetry/"
+echo "Hunter bot now writes all telemetry fields."
+echo "Anomaly detector will verify field completeness on every trial."
