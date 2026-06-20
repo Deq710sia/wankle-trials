@@ -497,46 +497,70 @@ The passive-bot.js and passive-nofire-bot.js are CORRECT — they have all field
    - `guardViolated`
    - `aliveTimeS`, `dodgeDurationS`, `nearestShellETA`
 
-2. **Delete all hunter-bot trial data** — Remove the broken JSONL logs, CSV rows, and telemetry files for RK Fight + Dungeon across all versions:
+2. **MOVE (do NOT delete) all hunter-bot trial data to archive** — Preserve the incomplete data in case it's useful later. The kill/death/wave/survival data IS valid — only the dodge telemetry fields are missing.
    ```bash
+   # Create archive folder for incomplete hunter-bot data
+   mkdir -p /home/z/agent-ctx/archive/incomplete-hunter-telemetry
+   
    for v in v19 v21.7 v22.8 v24 v25 v27; do
-     # Delete JSONL logs for RK Fight (c69c5ff7) and Dungeon (a6b7c90f)
-     rm -f /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-c69c5ff7-f4e-t*.jsonl
-     rm -f /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-a6b7c90f-813-t*.jsonl
-     # Delete telemetry files for RK and Dun
-     rm -rf /home/z/agent-ctx/telemetry/${v}/RK/
-     rm -rf /home/z/agent-ctx/telemetry/${v}/Dun/
+     # Move JSONL logs for RK Fight (c69c5ff7) and Dungeon (a6b7c90f)
+     mkdir -p /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-logs
+     mv /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-c69c5ff7-f4e-t*.jsonl \
+        /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-logs/ 2>/dev/null
+     mv /home/z/my-project/scripts/cheat-tests/parallel-${v}-logs/${v}-custom-a6b7c90f-813-t*.jsonl \
+        /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-logs/ 2>/dev/null
+     # Move telemetry files for RK and Dun
+     mkdir -p /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-telemetry
+     mv /home/z/agent-ctx/telemetry/${v}/RK/ \
+        /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-telemetry/ 2>/dev/null
+     mv /home/z/agent-ctx/telemetry/${v}/Dun/ \
+        /home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-telemetry/ 2>/dev/null
    done
    ```
 
-3. **Remove hunter-bot rows from CSVs** — Delete RK Fight + Dungeon rows from each version's CSV so drivers re-run them:
+3. **MOVE (do NOT delete) hunter-bot rows from CSVs** — Preserve them in an archive CSV, then remove from the active CSV so drivers re-run them:
    ```bash
    for v in v19 v21.7 v22.8 v24 v25 v27; do
      CSV=/home/z/my-project/scripts/cheat-tests/parallel-${v}-results.csv
-     # Keep header + rows that are NOT RK Fight or Dungeon
+     ARCHIVE_CSV=/home/z/agent-ctx/archive/incomplete-hunter-telemetry/${v}-RK-Dun-results.csv
+     # Save header + hunter-bot rows to archive
+     head -1 "$CSV" > "$ARCHIVE_CSV"
+     grep "custom-c69c5ff7-f4e\|custom-a6b7c90f-813" "$CSV" >> "$ARCHIVE_CSV"
+     # Remove hunter-bot rows from active CSV
      head -1 "$CSV" > "$CSV.tmp"
      grep -v "custom-c69c5ff7-f4e\|custom-a6b7c90f-813" "$CSV" >> "$CSV.tmp"
      mv "$CSV.tmp" "$CSV"
+     echo "$v: archived $(($(wc -l < "$ARCHIVE_CSV") - 1)) hunter-bot rows, kept $(($(wc -l < "$CSV") - 1)) passive-bot rows"
    done
    ```
 
-4. **Remove hunter-bot entries from trials.jsonl** — Delete entries for RK Fight + Dungeon:
+4. **MOVE (do NOT delete) hunter-bot entries from trials.jsonl** — Preserve them in an archive file:
    ```bash
    python3 -c "
    import json
+   
    with open('/home/z/agent-ctx/trials.jsonl') as f:
        lines = f.readlines()
+   
    kept = []
-   removed = 0
+   archived = []
    for line in lines:
        t = json.loads(line)
        if t.get('map') in ('RK', 'Dun'):
-           removed += 1
+           archived.append(line)
        else:
            kept.append(line)
+   
+   # Write archive file
+   with open('/home/z/agent-ctx/archive/incomplete-hunter-telemetry/trials-incomplete.jsonl', 'w') as f:
+       f.writelines(archived)
+   
+   # Write cleaned trials.jsonl
    with open('/home/z/agent-ctx/trials.jsonl', 'w') as f:
        f.writelines(kept)
-   print(f'Removed {removed} hunter-bot entries, kept {len(kept)}')
+   
+   print(f'Archived {len(archived)} hunter-bot entries to trials-incomplete.jsonl')
+   print(f'Kept {len(kept)} passive-bot entries in trials.jsonl')
    "
    ```
 
@@ -545,7 +569,9 @@ The passive-bot.js and passive-nofire-bot.js are CORRECT — they have all field
    node -c /home/z/my-project/scripts/cheat-tests/hunter-bot-v3.js
    ```
 
-6. **Then launch infrastructure** — The watchdog will detect missing trials and re-run them with the fixed hunter bot.
+6. **Then launch infrastructure** — The watchdog will detect missing trials (because CSV rows were removed) and re-run them with the fixed hunter bot. New data will be written to the same CSV/JSONL/telemetry locations — nothing overwritten because the old data was moved to archive.
+
+7. **After reruns complete** — The archive folder at `archive/incomplete-hunter-telemetry/` contains the old incomplete data. The kill/death/survival numbers there ARE valid and can be cross-referenced with the new complete data if needed.
 
 ### Note on why this happened
 
