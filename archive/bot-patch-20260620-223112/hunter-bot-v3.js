@@ -95,7 +95,7 @@
     var dodgeDb = window._wklDodgeDebug;
     if (dodgeDb && dodgeDb.lastDodgeVec) {
       tb.lastDodgeActive = true;
-      tb.lastDodgeUrgency = dodgeDb.lastDodgeVec.urgency || 0; tb.lastDodgeMoveX = dodgeDb.lastDodgeVec.moveX || 0; tb.lastDodgeMoveZ = dodgeDb.lastDodgeVec.moveZ || 0;
+      tb.lastDodgeUrgency = dodgeDb.lastDodgeVec.urgency || 0;
       tb.lastColdSpotReactive = dodgeDb.lastColdSpot ? dodgeDb.lastColdSpot.reactive : null;
       tb.lastColdSpotStrategic = dodgeDb.lastColdSpot ? dodgeDb.lastColdSpot.strategic : null;
       tb.lastPredictedShellCount = dodgeDb.predictedShellCount || 0;
@@ -684,18 +684,7 @@
         // ENHANCED telemetry (same as passive-bot.js)
         playerSpeed: Math.round(tb.lastMySpeed),
         dodgeActive: tb.lastDodgeActive, dodgeUrgency: tb.lastDodgeUrgency,
-        dodgeMoveX: Math.round((tb.lastDodgeMoveX || 0) * 100) / 100,
-        dodgeMoveZ: Math.round((tb.lastDodgeMoveZ || 0) * 100) / 100,
-        interceptActive: tb.lastInterceptActive,
-        coldSpotReactive: tb.lastColdSpotReactive ? {score: tb.lastColdSpotReactive.score} : null,
-        coldSpotStrategic: tb.lastColdSpotStrategic ? {score: tb.lastColdSpotStrategic.score} : null,
-        predictedShells: tb.lastPredictedShellCount || 0,
-        realShells: tb.lastRealShellCount || 0,
-        guardViolated: tb.lastDodgeGuardViolated || false,
-        pathGuardCrosses: tb.lastPathGuardCrosses || false,
-        pathGuardRotation: tb.lastPathGuardRotation || 0,
-        pathGuardResolved: tb.lastPathGuardResolved || false,
-        pathGuardShells: tb.lastPathGuardShells || 0
+        interceptActive: tb.lastInterceptActive
       });
     }
 

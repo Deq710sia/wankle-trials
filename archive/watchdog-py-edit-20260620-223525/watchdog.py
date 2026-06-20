@@ -17,7 +17,6 @@ Does NOT touch:
 Usage: python3 watchdog.py v19 v21.7 v22.8 --trials 30 --duration 90
 """
 import argparse
-import os
 import subprocess
 import time
 from datetime import datetime
@@ -193,13 +192,7 @@ def main():
         # v27-A/B-auto: if all monitored versions complete + A/B not yet launched, launch them
         # This handles the contender→A/B handoff automatically.
         # Checks: (1) all args.versions complete, (2) v27 specifically complete, (3) A/B not yet launched
-        #
-        # BATCH MODE: when WANKLE_BATCH_MODE=1 env var is set, A/B auto-launch is
-        # DISABLED. The orchestrator handles batch transitions by rewriting
-        # /home/z/agent-ctx/active-batch.txt and restarting the watchdog.
-        # This prevents 6 concurrent Chrome browsers from blowing past
-        # kernel.threads-max (929) on this VM.
-        if all_complete and not ab_launched and not os.environ.get('WANKLE_BATCH_MODE'):
+        if all_complete and not ab_launched:
             # Verify v27 (the contender) is complete — only launch A/B if v27 finished
             v27_csv = CHEAT_DIR / 'parallel-v27-results.csv'
             v27_count = 0
@@ -255,15 +248,6 @@ def main():
                 log(f'  Total: {sum(args.trials * 5 for _ in range(9))} trials done')
                 log(f'  Watchdog exiting — trials finished.')
                 break
-
-        # BATCH MODE: when current batch's versions all hit target, exit cleanly.
-        # The wrapper will read the (updated) batch file and restart with the
-        # next batch. The orchestrator updates the batch file when ready.
-        if os.environ.get('WANKLE_BATCH_MODE') and all_complete:
-            log(f'  🎉 BATCH COMPLETE — all versions in this batch hit {args.trials * 5} trials')
-            log(f'  Batch was: {args.versions}')
-            log(f'  Watchdog exiting — wrapper will pick up next batch.')
-            break
 
         time.sleep(30)
 

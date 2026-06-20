@@ -1,4 +1,5 @@
 version,trial,kills,deaths,wave,alive,hp,enemyCount,durationSec,avgFps,minFps,maxEnemies,botType,levelId,mode,aimbotOff,jsonlFile,corrBuckets
+version,trial,kills,deaths,wave,alive,hp,enemyCount,durationSec,avgFps,minFps,maxEnemies,botType,levelId,mode,aimbotOff,jsonlFile,corrBuckets
 v19,2,13,1,4,0,0,5,101,59.8,51.8,7,passive,custom-c2738ec4-135,survival,0,v19-custom-c2738ec4-135-t2.jsonl,0
 v19,3,13,1,1,0,0,0,101,59.9,56.1,7,passive,custom-c2738ec4-135,survival,0,v19-custom-c2738ec4-135-t3.jsonl,0
 v19,4,6,1,1,1,1,0,99,59.5,47.2,4,passive,custom-c2738ec4-135,survival,0,v19-custom-c2738ec4-135-t4.jsonl,0

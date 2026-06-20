@@ -1,6 +1,6 @@
 {
-  "lastUpdated": "2026-06-20T22:23:01.394080+00:00",
-  "watchdogPid": 24955,
+  "lastUpdated": "2026-06-20T22:37:30.442827+00:00",
+  "watchdogPid": 3306,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
   "anomalyLogPath": "/home/z/my-project/scripts/cheat-tests/anomaly-log.jsonl",
@@ -97,12 +97,9 @@
     }
   },
   "backupLocations": [
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v27-t30-20260620_212729",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v25-t30-20260620_212729",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v24-t30-20260620_212729",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t90-20260620_212729",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t90-20260620_212729",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t90-20260620_212729"
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t90-20260620_223730",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t90-20260620_223730",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t90-20260620_223730"
   ],
   "plannedVersions": [
     "v19",
