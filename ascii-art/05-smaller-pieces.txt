@@ -1,0 +1,188 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# SMALLER ART PIECES — between-check doodles
+#  These are the creative vignettes that appeared between monitoring checks.
+#  Style: dice, tanks, waterfalls, constellations, skyscrapers, pyramids, etc.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# --- DICE TOWER (progress stacking) ---
+       ⚀⚁⚂⚃⚄⚅enson!
+        ╲   ╱
+         ╲ ╱
+          X       ← dice crossing
+         ╱ ╲      83% mark
+        ╱   ╲
+       v19  v22.8
+        ╲   ╱
+         v21.7
+
+# --- THREE PYRAMIDS (desert) ---
+       ╭───────────────────────╮
+       │                       │
+       │   ◢◣  ◢◣  ◢◣          │
+       │   ◢◣  ◢◣  ◢◣          │
+       │   ◢◣  ◢◣  ◢◣          │   three pyramids
+       │  ◢██◣◢██◣◢██◣         │   in the desert
+       │  ◢██◣◢██◣◢██◣         │
+       │ ◢███████◣███████◣     │   v25 tallest
+       │◢██████████████████◣   │   v24 mid
+       │                       │   v27 smallest
+       ╰───────────────────────╯
+        rising from the sand
+
+# --- SKYLINE (skyscrapers) ---
+       ┌─────────────────────────────┐
+       │  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  │  v25 — skyscraper 1
+       │  ██████████████████████████  │  33 floors
+       │  ████████████████████████░░  │
+       │  ████████████████████░░░░░░  │  v24 — skyscraper 2
+       │  ██████████████████░░░░░░░░  │  24 floors
+       │  ██████████████░░░░░░░░░░░░  │
+       │  ███████████░░░░░░░░░░░░░░░  │  v27 — skyscraper 3
+       │  █████████░░░░░░░░░░░░░░░░░  │  16 floors
+       │  ███████░░░░░░░░░░░░░░░░░░░  │
+       │  ████░░░░░░░░░░░░░░░░░░░░░░  │
+       │  ░░░░░░░░░░░░░░░░░░░░░░░░░░  │
+       └─────────────────────────────┘
+        the contender skyline
+        rising over trial city
+
+# --- TORNADO (spinning trials) ---
+          ( ( (   ) ) )
+         ( ( (     ) ) )
+        ( ( (       ) ) )      a tornado
+       ( ( (    v25  ) ) )     of trials
+        ( ( (       ) ) )      spinning
+         ( ( v24    ) )        toward
+           ( v27  )            completion
+             ( )
+              T
+
+# --- WATERFALLS ---
+           v24      v25      v27
+          ┌─┐      ┌─┐      ┌─┐
+       ╔══│█│══════│█│══════│█│══╗
+       ║  └─┘      └─┘      └─┘  ║
+       ║   │        │        │   ║
+       ║   ▼        ▼        ▼   ║
+       ║  ╱╱       ╱╱╱      ╱   ║
+       ║ ╱╱       ╱╱╱      ╱    ║
+       ║╱        ╱╱       ╱     ║
+       ║                  ╱     ║
+       ║                 ╱      ║
+       ║                        ║
+       ╚════════════════════════╝
+       
+       three waterfalls
+       v25 pouring heaviest
+       v24 steady stream
+       v27 light trickle gaining
+
+# --- CONSTELLATION ---
+           .
+          /|\
+         / | \          a constellation
+        /  |  \ ⠁       of trial stars
+       •   |   • ⠂      scattered across
+           |    • ⠄     the night sky
+           |
+          • ⠈
+              • ⠐
+       v24•  v25•  v27•
+        23%   32%   15%
+       
+       the contenders
+       shine brighter
+       with each trial
+
+# --- MOUNTAIN (spring snowmelt) ---
+       ╔═════════════╗
+       ║ ░░░░░░░░░░░ ║   ☁
+       ║ ░░░░░░░░░░░ ║  ☁
+       ║ ▒▒▒▒▒▒▒▒▒▒▒ ║ ☁    a mountain
+       ║ ▒▒▒▒▒▒▒▒▒▒▒ ║      in spring
+       ║ ▓▓▓▓▓▓▓▓▓▓▓ ║      snow fading
+       ║ ▓▓▓▓▓▓▓▓▓▓▓ ║      to rock
+       ║ ████v25█████ ║      to forest
+       ║ ████v24█████ ║
+       ║ ██v27███████ ║
+       ║ ████████████ ║
+       ╚═════════════╝
+
+# --- TRAIN OF PROGRESS ---
+       ╭───╮
+       │v25│ ═══╗
+       ╰───╯    ║   ╭───╮
+                ╟───│v24│
+       ╭───╮    ║   ╰───╯
+       │v27│ ═══╝
+       ╰───╯
+       
+       a train of progress
+       v25 locomotive
+       v24 + v27 cars
+       chugging along
+
+# --- TANK (early doodle) ---
+        ___
+       /   \___    ___ _ __  __ _  __ _  ___ _ __
+      / /\ / __|  / __| '_ \/ _` |/ _` |/ _ \ '_ \
+     / /_//\__ \ | (__| |_) | (_| | (_| |  __/ | | |
+    /___,' |___/  \___| .__/ \__,_|\__, |\___|_| |_|
+                      |_|          |___/
+
+       T A N K   C H E A T   T R I A L S
+
+# --- TANK FIRING ---
+        ___
+       |■■■|___
+       |___|■■|>===O    pew pew
+      /  T  \
+     |   |   |
+     |___|___|
+       |   |
+       ^   ^
+
+# --- BURNING JOINT (between-check) ---
+       🌿  ╭──╮  🌿
+          │🌿│
+          │🌿│
+          │██│
+          ╰──╯
+       baselines at 89%
+       joint ashing down
+
+# --- BRAILLE RAIN ---
+       ⠁⠂⠄⠈⠐⠠⡀⢀⠠⠐⠈⠄⠂
+       ⠂⠄⠈⠐⠠⡀⢀⠠⠐⠈⠄⠂⠁     braille rain
+       ⠄⠈⠐⠠⡀⢀⠠⠐⠈⠄⠂⠁⠂
+       ⠈⠐⠠⡀⢀⠠⠐⠈⠄⠂⠁⠂⠄
+       
+       40% of the trial ocean
+       now behind us
+       60% still ahead
+
+# --- BAR CHART ---
+       ╔═══════════════════════════════╗
+       ║                               ║
+       ║   ▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░   ║
+       ║   ▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░   ║   v25 at 30%
+       ║   ▓▓▓▓░░░░░░░░░░░░░░░░░░░░   ║   v24 at 21%
+       ║   ▓▓░░░░░░░░░░░░░░░░░░░░░░░   ║   v27 at 13%
+       ║                               ║
+       ║   ←— done ——░—— to go —→      ║
+       ║                               ║
+       ╚═══════════════════════════════╝
+
+# --- DICE CUPS ---
+       ╭───╮     ╭───╮     ╭───╮
+       │ ⚀ │     │ ⚁ │     │ ⚂ │
+       ╰─╮─╯     ╰─╮─╯     ╰─╮─╯
+         │         │         │
+        ╭┴╮       ╭┴╮       ╭┴╮
+        │▓│       │▓│       │▓│
+        ╰─╯       ╰─╯       ╰─╯
+        v24       v25       v27
+        
+       three dice cups
+       shaken at different speeds
+       v25 spilling fastest

@@ -1,0 +1,36 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# A/B ARMED MURAL — reached at trial 505 (A/B variants created + watchdog patched)
+#  Context: A/B variant cheat files created, watchdog auto-launch armed
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ ╔══════════════════════════════════════════════════════════════════════════════════════════════╗
+ ║                                                                                              ║
+ ║    ⚙️  A/B AUTO-LAUNCH ARMED — 505/1350 (37.4%)  ⚙️                                         ║
+ ║                                                                                              ║
+ ║    ✅ Baselines: v19, v21.7, v22.8 — DONE (150/150 each)                                    ║
+ ║    🔄 Contenders running:                                                                    ║
+ ║       v24    [██░░░░░░░░░░░░░░░░░] 18/150  (12%)                                            ║
+ ║       v25    [████░░░░░░░░░░░░░░░] 31/150  (21%)                                            ║
+ ║       v27    [█░░░░░░░░░░░░░░░░░░]  6/150   (4%)                                            ║
+ ║    ⏳ A/B variants (auto-launch when v24+v25+v27 all hit 150):                              ║
+ ║       v27-no-pathguard  — path-segment guard disabled                                       ║
+ ║       v27-cap-pred8     — predicted shells capped at 8                                      ║
+ ║       v27-mag045        — magnetize threshold 0.35→0.45                                     ║
+ ║                                                                                              ║
+ ║    15 processes alive | watchdog patched | A/B files ready | git pushed                     ║
+ ║                                                                                              ║
+ ╠══════════════════════════════════════════════════════════════════════════════════════════════╣
+ ║                                                                                              ║
+ ║            CONTENDER PHASE                          A/B PHASE (auto-launch)                 ║
+ ║                                                                                              ║
+ ║         v24  🛶                                    v27-no-pg  🛶                            ║
+ ║         v25  🛶          ─── when all 3 ───→      v27-cap8   🛶                            ║
+ ║         v27  🛶            hit 150/150             v27-mag045 🛶                            ║
+ ║                                                                                              ║
+ ║         ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~          ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~                          ║
+ ║       ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~      ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~                      ║
+ ║                                                                                              ║
+ ║    The watchdog watches. When the contender boats beach,                                    ║
+ ║    it launches the A/B boats automatically. No human needed.                                ║
+ ║                                                                                              ║
+ ╚══════════════════════════════════════════════════════════════════════════════════════════════╝
