@@ -105,9 +105,21 @@ Plus:
 
 Auto-pushed every 5 minutes by `git-backup.sh`. Even if the VM dies, you lose at most 5 minutes of data.
 
+## Known Issues (read before starting)
+
+1. **Telemetry gap:** 533 of 638 trials have `telemetryFile=null` in trials.jsonl. Run `python3 harness/telemetry-backfill.py` once after setup to generate the missing per-trial telemetry JSON files. See HANDOFF.md Step 3a-ter.
+
+2. **webgpu-polyfill.js:** This file is in the repo root and MUST be copied to `/tmp/webgpu-polyfill.js` before starting trials. Without it, the browser harness fails to load Wankle3D and all trials produce K=0 D=0 (immobile cheat bug). See HANDOFF.md Step 3a-bis.
+
+3. **watchdog-wrapper.sh version list:** The wrapper monitors `v24 v25 v27` (contenders still in progress). If you need to change which versions are monitored (e.g., after contenders complete), edit the wrapper and restart. See HANDOFF.md Step 3c.
+
+4. **A/B variant auto-launch:** When v24+v25+v27 all hit 150/150, the watchdog auto-launches 3 A/B variants (v27-no-pathguard, v27-cap-pred8, v27-mag045). No manual intervention needed.
+
 ## Key Files for New Session
 
 If your context resets, read these first:
-1. `trial-data/trial-manifest.json` — current progress + file locations
-2. `docs/CONTINUATION_GUIDE.md` — exact relaunch commands
-3. `trial-data/trials.jsonl` — all trial results (one line per trial)
+1. `HANDOFF.md` — complete setup + monitoring guide (START HERE)
+2. `trial-manifest.json` — current progress + file locations
+3. `CONTINUATION_GUIDE.md` — detailed infrastructure reference
+4. `trials.jsonl` — all trial results (one line per trial)
+5. `ascii-art/README.md` — mural schedule + style notes for monitoring art

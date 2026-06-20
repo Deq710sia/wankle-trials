@@ -177,6 +177,32 @@ for f in v*.user.js; do
 done
 ```
 
+### 3a-bis. Restore webgpu-polyfill.js (CRITICAL — browser harness needs it)
+```bash
+# The file is in the repo root (webgpu-polyfill.js). Copy it to /tmp:
+cp webgpu-polyfill.js /tmp/webgpu-polyfill.js
+# Verify it exists:
+ls -la /tmp/webgpu-polyfill.js
+```
+
+Without this file, the browser harness will fail to load Wankle3D and all trials will produce K=0 D=0 (immobile cheat bug).
+
+### 3a-ter. Run telemetry-backfill to generate missing telemetry files (IMPORTANT)
+
+533 of 638 trials have `telemetryFile=null` in trials.jsonl (telemetry files were never generated for them). Run backfill ONCE before starting trials:
+
+```bash
+python3 /home/z/my-project/scripts/cheat-tests/telemetry-backfill.py
+```
+
+This scans trials.jsonl for entries with `telemetryFile=null`, generates the per-trial telemetry JSON files from the JSONL logs, and updates the pointer in trials.jsonl. It's safe to run anytime — it only generates missing files. This may take 5-10 minutes for 533 trials.
+
+After backfill, verify:
+```bash
+grep -c '"telemetryFile": null' /home/z/agent-ctx/trials.jsonl
+# Should be much lower (ideally 0, but some trials may have missing JSONL logs)
+```
+
 ### 3b. Launch the 4 infrastructure processes + git-backup
 
 ```bash

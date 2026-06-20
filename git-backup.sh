@@ -11,7 +11,8 @@ cp /home/z/my-project/scripts/cheat-tests/*.sh trial-data/scripts/ 2>/dev/null
 cp /home/z/my-project/download/wankle-cheat-v*.user.js trial-data/ 2>/dev/null
 
 # Refresh JSONL logs (rsync-style: remove stale, copy new)
-for v in v19 v21.7 v22.8 v24 v25 v27; do
+# Includes ALL versions: baselines + contenders + A/B variants
+for v in v19 v21.7 v22.8 v24 v25 v27 v27-no-pathguard v27-cap-pred8 v27-mag045; do
   src="/home/z/my-project/scripts/cheat-tests/parallel-${v}-logs"
   dst="trial-data/logs/${v}-logs"
   if [ -d "$src" ]; then
