@@ -114,15 +114,16 @@ def read_json(path, default=None):
 
 
 def load_style_reference():
-    """Read 2-3 existing ASCII art pieces to use as style reference."""
+    """Read 1-2 existing ASCII art pieces as style reference.
+    Keep prompt compact to avoid triggering reasoning mode in the LLM."""
     pieces = []
-    for fname in STYLE_REFERENCE_FILES:
+    # Use only 1 file, trimmed to ~40 lines, to keep prompt small
+    for fname in ['05-smaller-pieces.txt']:
         path = REPO_ASCII / fname
         text = read_file(path)
         if text:
-            # Trim to first ~80 lines to keep prompt size reasonable
-            lines = text.split('\n')[:80]
-            pieces.append(f'### Example: {fname}\n```\n{chr(10).join(lines)}\n```')
+            lines = text.split('\n')[:40]
+            pieces.append(f'### Style example (from {fname}):\n{chr(10).join(lines)}')
     return '\n\n'.join(pieces)
 
 
@@ -276,12 +277,14 @@ Now generate ONE new ASCII art piece in the established style. Output ONLY the a
 
 
 def call_pollinations(prompt, max_retries=2):
-    """Call Pollinations.ai (zero-auth, free, NOT GLM)."""
+    """Call Pollinations.ai (zero-auth, free, NOT GLM).
+    Uses 'openai' (non-reasoning) model — reasoning models return JSON
+    with reasoning traces instead of plain text."""
     payload = json.dumps({
         'messages': [
             {'role': 'user', 'content': prompt}
         ],
-        'model': 'openai-fast',
+        'model': 'openai',  # NOT openai-fast (that triggers reasoning mode)
     }).encode()
 
     for attempt in range(max_retries + 1):
@@ -292,11 +295,11 @@ def call_pollinations(prompt, max_retries=2):
                 headers={
                     'Content-Type': 'application/json',
                     'Referer': 'https://pollinations.ai',
-                    'User-Agent': 'curl/8.0',  # pollinations blocks python-urllib default UA
+                    'User-Agent': 'curl/8.0',
                 },
                 method='POST',
             )
-            with urllib.request.urlopen(req, timeout=90) as resp:
+            with urllib.request.urlopen(req, timeout=120) as resp:
                 return resp.read().decode('utf-8')
         except Exception as e:
             log(f'  attempt {attempt+1} failed: {e}')
@@ -307,8 +310,14 @@ def call_pollinations(prompt, max_retries=2):
 
 
 def clean_output(text):
-    """Strip markdown code fences if present, trim whitespace."""
+    """Strip markdown code fences if present, trim whitespace.
+    Returns None if the response looks like a reasoning trace (JSON)."""
     if not text:
+        return None
+    text = text.strip()
+    # If response starts with { it's likely a reasoning-trace JSON, not art
+    if text.startswith('{') and '"reasoning"' in text[:200]:
+        log('  WARNING: response looks like reasoning trace JSON — discarding')
         return None
     # Remove markdown code fences
     text = re.sub(r'^```\w*\n?', '', text)
