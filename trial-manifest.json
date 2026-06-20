@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-06-20T09:09:52.944136+00:00",
+  "lastUpdated": "2026-06-20T09:14:53.186574+00:00",
   "watchdogPid": 17508,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
@@ -17,11 +17,11 @@
   "versionsRemaining": [
     "v27"
   ],
-  "trialsCompleted": 396,
+  "trialsCompleted": 405,
   "trialsTotal": 900,
   "perVersion": {
     "v19": {
-      "completed": 120,
+      "completed": 123,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v19-results.csv",
@@ -29,7 +29,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v19"
     },
     "v21.7": {
-      "completed": 119,
+      "completed": 122,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v21.7-results.csv",
@@ -37,7 +37,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v21.7"
     },
     "v22.8": {
-      "completed": 120,
+      "completed": 123,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v22.8-results.csv",
@@ -70,6 +70,7 @@
     }
   },
   "backupLocations": [
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t120-20260620_091016",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t120-20260620_090916",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t120-20260620_090916",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t90-20260620_081646",
@@ -77,8 +78,7 @@
     "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t90-20260620_081646",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t60-20260620_072546",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t60-20260620_072546",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t60-20260620_072546",
-    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t30-20260620_063416"
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t60-20260620_072546"
   ],
   "plannedVersions": [
     "v19",
