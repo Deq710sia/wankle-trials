@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-06-20T21:57:30.367063+00:00",
+  "lastUpdated": "2026-06-20T22:02:30.570448+00:00",
   "watchdogPid": 24955,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
@@ -20,7 +20,7 @@
     "v27-cap-pred8",
     "v27-mag045"
   ],
-  "trialsCompleted": 377,
+  "trialsCompleted": 386,
   "trialsTotal": 1350,
   "perVersion": {
     "v19": {
@@ -48,7 +48,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v22.8"
     },
     "v24": {
-      "completed": 33,
+      "completed": 36,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v24-results.csv",
@@ -56,7 +56,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v24"
     },
     "v25": {
-      "completed": 41,
+      "completed": 44,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v25-results.csv",
@@ -64,7 +64,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v25"
     },
     "v27": {
-      "completed": 33,
+      "completed": 36,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v27-results.csv",
