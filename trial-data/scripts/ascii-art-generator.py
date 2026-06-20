@@ -114,16 +114,27 @@ def read_json(path, default=None):
 
 
 def load_style_reference():
-    """Read 1-2 existing ASCII art pieces as style reference.
-    Keep prompt compact to avoid triggering reasoning mode in the LLM."""
+    """Read 1 short existing ASCII art piece as style reference.
+    Keep prompt compact (<2KB) so GET URL doesn't 414."""
     pieces = []
-    # Use only 1 file, trimmed to ~40 lines, to keep prompt small
     for fname in ['05-smaller-pieces.txt']:
         path = REPO_ASCII / fname
         text = read_file(path)
         if text:
-            lines = text.split('\n')[:40]
-            pieces.append(f'### Style example (from {fname}):\n{chr(10).join(lines)}')
+            # Pick a 15-line excerpt — the tank firing piece + lighthouse style
+            lines = text.split('\n')
+            # Find the TANK FIRING section
+            excerpt = []
+            capturing = False
+            for line in lines:
+                if 'TANK FIRING' in line or 'WATERFALLS' in line or 'CONSTELLATION' in line:
+                    capturing = True
+                if capturing:
+                    excerpt.append(line)
+                    if len(excerpt) >= 15:
+                        break
+            if excerpt:
+                pieces.append(f'STYLE EXAMPLE:\n{chr(10).join(excerpt)}')
     return '\n\n'.join(pieces)
 
 
@@ -222,14 +233,12 @@ def pick_theme():
 
 
 def build_prompt(theme, status_text, style_reference):
-    """Build the full prompt for the LLM."""
+    """Build the full prompt for the LLM. Keep total < 3000 chars to avoid 414 URI Too Large."""
     is_milestone = False
     milestone_type = None
-    # Check if we're at a milestone (675, 710, 900, 1350)
     manifest = read_json(AGENT_CTX / 'trial-manifest.json', {}) or {}
     trials_done = manifest.get('trialsCompleted', 0) if isinstance(manifest, dict) else 0
     for target, name in [(675, 'HALFWAY'), (710, 'DAB_OIL_RIG'), (900, 'BASELINES_CONTENDERS_DONE'), (1350, 'FINAL_ARMADA')]:
-        # Check if we just crossed this milestone (within last 30 trials)
         recent_pieces = sorted(LIVE_DIR.glob('*.txt'), key=lambda p: p.stat().st_mtime, reverse=True)
         already_done = any(name in p.read_text()[:500] for p in recent_pieces[:5])
         if trials_done >= target and not already_done:
@@ -238,73 +247,57 @@ def build_prompt(theme, status_text, style_reference):
             break
 
     if is_milestone:
-        size_instruction = "BIG MURAL (40-60 lines)"
+        size_instruction = "BIG mural 40-60 lines"
         if milestone_type == 'DAB_OIL_RIG':
-            theme = 'an oil rig (DAB theme — user specifically requested this mural at trial 710)'
+            theme = 'oil rig (DAB theme)'
         elif milestone_type == 'HALFWAY':
-            theme = 'halfway mark — a mountain peak crested, the descent visible ahead'
+            theme = 'mountain peak crested halfway'
         elif milestone_type == 'BASELINES_CONTENDERS_DONE':
-            theme = 'a finish line crossed by baseline and contender runners, A/B variants waiting their turn'
+            theme = 'finish line crossed'
         elif milestone_type == 'FINAL_ARMADA':
-            theme = 'the final armada reaching the shore after a long voyage — celebration'
+            theme = 'final armada reaching shore'
     else:
-        size_instruction = "small between-check vignette (10-20 lines)"
+        size_instruction = "10-20 lines"
 
-    prompt = f"""You are the resident ASCII artist for a long-running trial suite monitoring dashboard. The project: an aimbot/dodge cheat for Wankle3D (wanshot.lol), a 3D multiplayer tank game. We are running 1350 trials across 9 cheat versions × 5 maps, monitoring them continuously and creating ASCII art between checks.
-
-ESTABLISHED STYLE (study these examples carefully — your output MUST match this style):
+    # Compact prompt — keep under ~3KB so GET URL doesn't 414
+    prompt = f"""You are an ASCII artist for a tank-game cheat trial dashboard. 1350 trials across 9 versions x 5 maps. Generate ONE new ASCII art piece.
 
 {style_reference}
 
-STYLE RULES:
-- Use ONLY standard ASCII chars + box drawing chars (█░▓▒║╗╚╔│┌┐└┘├┤┬┴┼─━┃┏┓┗┛) + occasional Unicode symbols (🌊🛶☁ etc.)
-- ALWAYS include a progress bar for at least the running versions (format: `[██████░░░░░░░░░] N/150 (XX%)`)
-- ALWAYS show process/thread status line (e.g. `procs: 18 | threads: 683/929 (74%) | chrome: 42`)
-- BE CREATIVE — find new metaphors every time, do NOT repeat themes already used
-- AVOID these themes (already used): {', '.join(USED_THEMES)}
-- Output ONLY the ASCII art, no markdown code fences, no explanation
-- Start with a comment line: `# --- <THEME NAME> (one-line context) ---`
-- Include the current trial count somewhere visible
+RULES: ASCII + box chars (█░▓▒│┌┐└┘├┤┬┴┼─) + occasional emoji. Include progress bar for running versions like [██████░░░░] N/150 (XX%). Include status line: procs:X | threads:Y/Z (P%). Start with `# --- THEME NAME ---` line. Output ONLY art, no code fences, no explanation.
 
-THEME FOR THIS PIECE: {theme}
+THEME: {theme}
 SIZE: {size_instruction}
 
 {status_text}
 
-Now generate ONE new ASCII art piece in the established style. Output ONLY the art, starting with the comment line. No markdown fences, no explanation."""
+Generate the art now. ONLY art starting with the # comment line."""
 
     return prompt, is_milestone, milestone_type
 
 
 def call_pollinations(prompt, max_retries=2):
-    """Call Pollinations.ai (zero-auth, free, NOT GLM).
-    Uses 'openai' (non-reasoning) model — reasoning models return JSON
-    with reasoning traces instead of plain text."""
-    payload = json.dumps({
-        'messages': [
-            {'role': 'user', 'content': prompt}
-        ],
-        'model': 'openai',  # NOT openai-fast (that triggers reasoning mode)
-    }).encode()
+    """Call Pollinations.ai via GET endpoint (zero-auth, free, NOT GLM).
+    Uses 'openai-fast' model. The POST endpoint returns reasoning-trace JSON
+    for complex prompts, but GET returns clean text."""
+    encoded = urllib.parse.quote(prompt)
+    url = f'https://text.pollinations.ai/prompt/{encoded}?model=openai-fast'
 
     for attempt in range(max_retries + 1):
         try:
             req = urllib.request.Request(
-                'https://text.pollinations.ai/',
-                data=payload,
+                url,
                 headers={
-                    'Content-Type': 'application/json',
-                    'Referer': 'https://pollinations.ai',
                     'User-Agent': 'curl/8.0',
+                    'Referer': 'https://pollinations.ai',
                 },
-                method='POST',
             )
             with urllib.request.urlopen(req, timeout=120) as resp:
                 return resp.read().decode('utf-8')
         except Exception as e:
             log(f'  attempt {attempt+1} failed: {e}')
             if attempt < max_retries:
-                time.sleep(10)
+                time.sleep(15)
             else:
                 return None
 
