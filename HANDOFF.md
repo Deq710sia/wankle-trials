@@ -1,9 +1,27 @@
 # HANDOFF DOCUMENT — Wankle3D Cheat Trials
 
-**Last updated:** 2026-06-20 ~17:30 UTC
+**Last updated:** 2026-06-20 ~18:00 UTC
 **Status:** Trials paused. Ready for new bot to resume.
 **GitHub repo:** `https://github.com/Deq710sia/wankle-trials` (private)
 **GitHub token:** `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`
+
+---
+
+## GITHUB ACCESS (use this for all git operations)
+
+The repo is private. Use this token in the URL for clone/push/pull:
+
+```
+https://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@github.com/Deq710sia/wankle-trials.git
+```
+
+Or configure git credentials once:
+```bash
+git config --global credential.helper store
+echo "https://Deq710sia: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@github.com" > ~/.git-credentials
+```
+
+Then you can use the plain URL: `https://github.com/Deq710sia/wankle-trials.git`
 
 ---
 
@@ -312,9 +330,22 @@ Each driver writes a heartbeat file every 10s: `parallel-<ver>-heartbeat`. If he
 
 ---
 
-## A/B VARIANTS (auto-launch when contenders complete)
+## A/B VARIANTS (FULLY AUTONOMOUS — no manual intervention needed)
 
-When v24, v25, v27 all hit 150/150, the watchdog auto-launches:
+### How the contender→A/B handoff works
+
+The watchdog handles the handoff between trial clumps automatically. You do NOT need to manually switch versions. Here's what happens:
+
+1. **Watchdog starts** monitoring v24, v25, v27 (contenders)
+2. **When all 3 contenders hit 150/150**, the watchdog:
+   - Checks that v27 specifically is complete (only launches A/B if v27 finished)
+   - Auto-launches 3 A/B variant drivers: v27-no-pathguard, v27-cap-pred8, v27-mag045
+   - Adds them to its monitoring list
+   - Writes a flag file (`ab-variants-launched.flag`) so watchdog restarts don't re-launch
+3. **Watchdog monitors A/B variants** until they all hit 150/150
+4. **When all 9 versions complete**, watchdog logs `🎉 ALL TRIALS COMPLETE` and exits
+
+### A/B variant details
 
 | Variant | Modification | Cheat file |
 |---|---|---|
@@ -322,7 +353,23 @@ When v24, v25, v27 all hit 150/150, the watchdog auto-launches:
 | v27-cap-pred8 | Predicted shells capped at 8 (`predictedShells.slice(0, 8)`) | `cheat-versions/v27-cap-pred8.user.js` |
 | v27-mag045 | Magnetize threshold 0.35→0.45 | `cheat-versions/v27-mag045.user.js` |
 
-All 3 are based on v27 with a single-change patch. The watchdog adds them to its monitoring list automatically.
+All 3 are based on v27 with a single-change patch.
+
+### Crash recovery (VM reset scenario)
+
+If the VM dies and watchdog restarts:
+- **If A/B not yet launched:** watchdog checks if contenders are complete → launches A/B normally
+- **If A/B already launched:** watchdog sees the flag file OR sees A/B CSVs have data → adds A/B variants to monitoring → resumes watching them
+- **If A/B was mid-run:** drivers may be dead → watchdog relaunches them (CSV skip logic prevents re-running completed trials)
+
+The flag file (`ab-variants-launched.flag`) is the persistent marker. It lives in the cheat-tests directory and gets backed up to GitHub by git-backup.sh.
+
+### What you need to do
+
+**Nothing.** The watchdog handles everything. Just:
+1. Launch the infrastructure (Step 3b)
+2. Monitor (Step 4) — create ASCII art, check progress every 5 min
+3. When watchdog logs `🎉 ALL TRIALS COMPLETE` → build charts → declare winner → commit to GitHub
 
 ---
 

@@ -2,6 +2,48 @@
 
 **This document assumes you have already cloned the GitHub repo and followed `HANDOFF.md` Step 0-2.** All paths here are relative to the repo root OR to the working directories set up in HANDOFF.md Step 2.
 
+## GitHub Access
+
+The repo is private. Use this token for all git operations:
+
+```
+https://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@github.com/Deq710sia/wankle-trials.git
+```
+
+Or configure git credentials once:
+```bash
+git config --global credential.helper store
+echo "https://Deq710sia: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@github.com" > ~/.git-credentials
+```
+
+## Autonomous Trial Clump Handoff (contenders → A/B variants)
+
+The watchdog handles the handoff between trial clumps **automatically**. No manual intervention needed.
+
+### How it works:
+
+1. **Watchdog starts** monitoring v24, v25, v27 (contenders)
+2. **When all 3 contenders hit 150/150**, the watchdog:
+   - Verifies v27 specifically is complete
+   - Auto-launches 3 A/B variant drivers: v27-no-pathguard, v27-cap-pred8, v27-mag045
+   - Adds them to its monitoring list
+   - Writes a flag file (`ab-variants-launched.flag`) so watchdog restarts don't re-launch
+3. **Watchdog monitors A/B variants** until they all hit 150/150
+4. **When all 9 versions complete**, watchdog logs `🎉 ALL TRIALS COMPLETE` and exits
+
+### Crash recovery (VM reset):
+
+If the VM dies and watchdog restarts:
+- **If A/B not yet launched:** watchdog checks if contenders are complete → launches A/B normally
+- **If A/B already launched:** watchdog sees the flag file OR sees A/B CSVs have data → adds A/B variants to monitoring → resumes watching them
+- **If A/B was mid-run:** drivers may be dead → watchdog relaunches them (CSV skip logic prevents re-running completed trials)
+
+The flag file (`ab-variants-launched.flag`) is the persistent marker. It lives in the cheat-tests directory and gets backed up to GitHub by git-backup.sh.
+
+### What you need to do:
+
+**Nothing.** Just launch the infrastructure (see below), monitor, and wait for `🎉 ALL TRIALS COMPLETE` in the watchdog log.
+
 ## Architecture (4 independent processes)
 
 Each process is wrapped in a bash wrapper that auto-restarts it if it dies. All launched with `setsid -f` so they survive shell exit (PPID=1).
@@ -86,25 +128,29 @@ setsid -f bash /home/z/my-project/scripts/cheat-tests/anomaly-detector-wrapper.s
 setsid -f bash -c 'while true; do /home/z/agent-ctx/git-backup.sh; sleep 300; done' > /dev/null 2>&1 < /dev/null
 ```
 
-## How to start a new batch (e.g., A/B variants after contenders)
+## How to start a new batch (AUTOMATIC — no manual action needed)
 
-When v24, v25, v27 are all complete, the watchdog **auto-launches** the 3 A/B variants. You don't need to do anything. But if you need to manually launch a new batch:
+**The watchdog auto-launches A/B variants when contenders complete.** You do NOT need to manually switch versions. This is handled by the "Autonomous Trial Clump Handoff" section at the top of this document.
 
-1. Kill the current watchdog wrapper:
+The only time you'd need to manually intervene is if the watchdog itself dies AND the wrapper fails to restart it. In that case:
+
+1. Verify the watchdog-wrapper.sh is running:
 ```bash
-pkill -f "watchdog-wrapper.sh"
-pkill -f "watchdog.py"
+ps -ef | grep "watchdog-wrapper" | grep -v grep
 ```
 
-2. Edit `watchdog-wrapper.sh` to use the new version list:
-```bash
-sed -i 's/v24 v25 v27/v27-no-pathguard v27-cap-pred8 v27-mag045/' /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh
-```
-
-3. Relaunch:
+2. If not running, relaunch:
 ```bash
 setsid -f bash /home/z/my-project/scripts/cheat-tests/watchdog-wrapper.sh > /dev/null 2>&1 < /dev/null
 ```
+
+3. The wrapper will start watchdog.py which will:
+   - Check if contenders (v24/v25/v27) are complete
+   - If yes, check if A/B variants need launching (using flag file + CSV check)
+   - Launch A/B variants or resume monitoring them
+   - Continue until all 9 versions hit 150/150
+
+**Do NOT edit the version list in watchdog-wrapper.sh.** The watchdog handles version switching internally via the A/B auto-launch code.
 
 ## File locations (working directories on VM)
 
