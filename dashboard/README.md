@@ -6,6 +6,11 @@ cheat-detection experiment. Reads data directly from this GitHub repo
 
 **Live site:** https://deq710sia.github.io/wankle-trials/
 
+> **⚠ One-time manual deploy step required.** See [`DEPLOY.md`](./DEPLOY.md).
+> The dashboard code is ready; you just need to paste one workflow file
+> via the GitHub UI (Option A, ~2 min) OR give me a workflow-enabled PAT
+> (Option B).
+
 ## Features
 
 - **Live telemetry** — polls `trial-manifest.json`, `status-snapshot.json`,
