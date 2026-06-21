@@ -138,3 +138,68 @@ Stage Summary:
 - All transitions happen without manual intervention.
 - T+18min progress: +30 trials (5/min aggregate). Batch 1 ETA ~53 min.
 - Total remaining ETA: ~3 hours (batch 1: 53min + batch 2: 90min + batch 3: 36min).
+
+---
+Task ID: preservation-and-backup
+Agent: main (super-z)
+Task: (1) Set up rerun data preservation — don't delete old data, separate it.
+(2) Backup all my scripts + file edits to GitHub. (3) Evaluate OpenRouter for
+ASCII generator.
+
+Work Log:
+- Verified archive folder IS already in GitHub (287 files including all 262
+  incomplete trials at archive/incomplete-hunter-telemetry/).
+- Created merge-archived-data.py: runs AFTER batch 3 completes. Adds an
+  `incomplete` column to active per-version CSVs, then merges the old
+  archived RK+Dun rows back in with incomplete=1. This preserves kill data
+  while clearly marking it as telemetry-incomplete. Originals backed up to
+  archive/pre-merge-archived-<timestamp>/ before modification. Idempotent.
+- Wired merge-archived-data.py into batch-orchestrator.py: when all 3 batches
+  complete + DONE marker is written, orchestrator runs the merge script
+  automatically. No manual intervention needed.
+- Also writes a README.md into archive/incomplete-hunter-telemetry/ documenting
+  what's preserved, what's missing, and how the incomplete column works.
+- Extended git-backup.sh (v2) to also push:
+  * Patched hunter-bot-v3.js → bots/ (CRITICAL — was unpatched in repo)
+  * All other bot .js files → bots/
+  * expected-telemetry-fields.json → harness/
+  * active-batch.txt → repo root
+  * status-snapshot.json → repo root (live VM state for dashboard site)
+  * all-batches-complete.flag → repo root (when batch 3 done)
+  * ascii-art/live/*.txt → ascii-art/live/
+  * worklog.md → repo root
+- Backed up original git-backup.sh to archive/pre-git-backup-edit-<timestamp>/
+  before modifying.
+- Ran git-backup once to push everything immediately. Verified:
+  * bots/hunter-bot-v3.js has 3 telemetry field references (patched version)
+  * active-batch.txt, status-snapshot.json, worklog.md all in repo
+  * expected-telemetry-fields.json in both bots/ and harness/
+  * merge-archived-data.py in trial-data/scripts/
+- Restarted batch-orchestrator.py (killed python, wrapper auto-restarted
+  within 5s). Trials untouched — verified same driver PIDs.
+
+Stage Summary:
+- All my scripts + edits are now in GitHub. If the VM dies, the next agent
+  clones the repo and gets:
+  * Patched hunter bot (no need to re-patch)
+  * All batch orchestration logic
+  * Status snapshot generator
+  * Merge script for rerun preservation
+  * Full worklog of what was done
+- Rerun preservation plan:
+  * Old 262 archived trials stay in archive/incomplete-hunter-telemetry/
+  * After batch 3 completes, merge-archived-data.py auto-runs
+  * Active CSVs get an `incomplete` column
+  * Old RK+Dun rows merged back in with incomplete=1
+  * Analysis scripts filter WHERE incomplete=0 for clean data
+  * Kill/death stats can include incomplete=1 rows (data is valid)
+- OpenRouter evaluation:
+  * YES, OpenRouter key would work much better than Pollinations
+  * Pollinations free tier only has openai-fast (reasoning model that
+    returns JSON reasoning traces instead of plain text)
+  * GET endpoint works but hits 414 URI Too Large for prompts >3KB
+  * OpenRouter has free models: google/gemini-2.0-flash-exp:free,
+    meta-llama/llama-3.2-3b-instruct:free, mistralai/mistral-7b-instruct:free
+  * Standard OpenAI-compatible POST API (no URL length limits)
+  * Returns clean text (no reasoning traces)
+  * User offered to provide an OpenRouter key — waiting for it.
