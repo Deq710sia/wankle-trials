@@ -50,39 +50,73 @@ export function progressBar(done: number, total: number, width = 20): string {
 }
 
 // Map map-id prefixes to friendly names (matches the wankle maps).
+// Note: DT-off and DT-on share the same levelId (custom-5f697a3b-742) —
+// they're the same "Dodge Training" level with different aimbot settings.
+// Distinguish them using the aimbotOff field, not the levelId.
 const MAP_NAMES: Record<string, string> = {
-  'custom-c2738ec4-135': 'CA (Combat Arena)',
-  'custom-a6b7c90f-813': 'RK Fight Survival',
-  'custom-c69c5ff7-f4e': 'Dungeon',
-  'custom-4a2d5e8b-777': 'DT-off (DeathTrap)',
-  'custom-9f3c1d6b-221': 'DT-on (DeathTrap)',
+  'custom-c2738ec4-135': 'CA (Custom Arena)',
+  'custom-c69c5ff7-f4e': 'RK Fight',
+  'custom-a6b7c90f-813': 'Dungeon',
+  'custom-5f697a3b-742': 'Dodge Training',
 };
 
 export function mapName(levelId: string): string {
   return MAP_NAMES[levelId] || levelId.slice(0, 16);
 }
 
-export function shortMap(levelId: string): string {
+// Short label for a trial. Uses levelId + aimbotOff to distinguish
+// DT-off (aimbotOff=1/true) from DT-on (aimbotOff=0/false).
+export function shortMap(levelId: string, aimbotOff?: number | string | boolean): string {
   if (levelId.startsWith('custom-c2738ec4')) return 'CA';
-  if (levelId.startsWith('custom-a6b7c90f')) return 'RK';
-  if (levelId.startsWith('custom-c69c5ff7')) return 'Dun';
-  if (levelId.startsWith('custom-4a2d5e8b')) return 'DT-';
-  if (levelId.startsWith('custom-9f3c1d6b')) return 'DT+';
+  if (levelId.startsWith('custom-c69c5ff7')) return 'RK';
+  if (levelId.startsWith('custom-a6b7c90f')) return 'Dun';
+  if (levelId.startsWith('custom-5f697a3b')) {
+    // Dodge Training — same level, two variants by aimbot setting
+    let off: number | boolean;
+    if (typeof aimbotOff === 'string') off = parseInt(aimbotOff, 10);
+    else off = aimbotOff ?? 0;
+    // off===1 or off===true means aimbot is OFF (pure dodge test)
+    return (off === 1 || off === true) ? 'DT-off' : 'DT-on';
+  }
   return levelId.slice(0, 4);
 }
 
+// Full label including the map name + variant
+export function fullMapLabel(levelId: string, aimbotOff?: number | string | boolean): string {
+  if (levelId.startsWith('custom-5f697a3b')) {
+    let off: number | boolean;
+    if (typeof aimbotOff === 'string') off = parseInt(aimbotOff, 10);
+    else off = aimbotOff ?? 0;
+    return (off === 1 || off === true) ? 'Dodge Training (aimbot OFF)' : 'Dodge Training (aimbot ON)';
+  }
+  return mapName(levelId);
+}
+
 // Compute per-version-per-map progress from CSV rows.
+// Distinguishes DT-off from DT-on via the aimbotOff field.
 export function perMapBreakdown(
-  rows: { levelId: string; trial: number }[] | undefined,
+  rows: { levelId: string; trial: number; aimbotOff?: number | string | boolean }[] | undefined,
 ): { map: string; short: string; count: number }[] {
   if (!rows || rows.length === 0) return [];
   const counts = new Map<string, number>();
   for (const r of rows) {
-    counts.set(r.levelId, (counts.get(r.levelId) ?? 0) + 1);
+    const key = shortMap(r.levelId, r.aimbotOff);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
-  return Array.from(counts.entries()).map(([levelId, count]) => ({
-    map: mapName(levelId),
-    short: shortMap(levelId),
+  // Sort in canonical order: CA, RK, Dun, DT-off, DT-on
+  const order = ['CA', 'RK', 'Dun', 'DT-off', 'DT-on'];
+  return Array.from(counts.entries()).map(([short, count]) => ({
+    map: short === 'CA' ? 'Custom Arena'
+      : short === 'RK' ? 'RK Fight'
+      : short === 'Dun' ? 'Dungeon'
+      : short === 'DT-off' ? 'Dodge Training (OFF)'
+      : short === 'DT-on' ? 'Dodge Training (ON)'
+      : short,
+    short,
     count,
-  })).sort((a, b) => a.short.localeCompare(b.short));
+  })).sort((a, b) => {
+    const ai = order.indexOf(a.short);
+    const bi = order.indexOf(b.short);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
 }

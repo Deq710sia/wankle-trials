@@ -423,7 +423,7 @@ function VersionCard({
   target: number;
   status: string;
   csvStats?: { rows: number; avgKills: number; avgDeaths: number; avgDuration: number; avgFps: number; uniqueLevels: number };
-  csvRows?: { levelId: string; trial: number }[];
+  csvRows?: { levelId: string; trial: number; aimbotOff: number }[];
   driver?: { alive: boolean; ageSec: number; trialCount: number };
 }) {
   const pct = target > 0 ? (completed / target) * 100 : 0;
@@ -644,7 +644,7 @@ function AnomalyFeed({ status }: { status: AggregatedStatus | null }) {
             <div key={i} className="text-[10px] md:text-xs font-mono p-2 rounded border border-warning/30 bg-warning/5">
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-warning">
-                  {a.version} · trial {a.trial} · {shortMap(a.levelId)}
+                  {a.version} · trial {a.trial} · {shortMap(a.levelId, a.aimbotOff)}
                 </span>
                 <span className="text-muted-foreground">{fmtTime(a.timestamp)}</span>
               </div>
