@@ -8,8 +8,11 @@ import {
 } from '@/lib/format';
 
 const STATUS_POLL_MS = 10_000;       // 10s status poll
-const ASCII_POLL_MS = 5 * 60_000;    // 5 min ASCII art refresh
-const ASCII_COUNTDOWN_GRACE_MS = 200;
+// ASCII art refresh is SYNCHRONIZED with git-backup (every 5 min).
+// Instead of an independent countdown, we watch for changes to
+// status-snapshot.json's timestampUnix — when it advances, that means
+// git-backup just pushed fresh data. We trigger ASCII gen right after.
+const ASCII_MIN_INTERVAL_MS = 4 * 60_000;  // safety floor (don't spam)
 
 interface AsciiPiece {
   art: string;
@@ -25,7 +28,8 @@ export default function Home() {
   const [asciiLoading, setAsciiLoading] = useState(false);
   const [asciiErr, setAsciiErr] = useState<string | null>(null);
   const [asciiHistory, setAsciiHistory] = useState<AsciiPiece[]>([]);
-  const [nextAsciiIn, setNextAsciiIn] = useState(ASCII_POLL_MS);
+  const [lastAsciiFetch, setLastAsciiFetch] = useState(0);
+  const [lastSeenSnapshotTs, setLastSeenSnapshotTs] = useState(0);
   const [booted, setBooted] = useState(false);
   const lastStatusRef = useRef<AggregatedStatus | null>(null);
 
@@ -45,7 +49,18 @@ export default function Home() {
   }, []);
 
   // ── ASCII art fetch ────────────────────────────────────────────
-  const fetchAscii = useCallback(async () => {
+  // Triggered on mount, on manual refresh, OR when git-backup pushes
+  // new data (detected via status-snapshot.json's timestampUnix advancing).
+  const lastAsciiFetchRef = useRef(0);
+
+  const fetchAscii = useCallback(async (reason?: string) => {
+    // Throttle: don't fetch more than once per ASCII_MIN_INTERVAL_MS
+    const now = Date.now();
+    if (now - lastAsciiFetchRef.current < ASCII_MIN_INTERVAL_MS && reason !== 'manual') {
+      return;
+    }
+    lastAsciiFetchRef.current = now;
+    setLastAsciiFetch(now);
     setAsciiLoading(true);
     setAsciiErr(null);
     try {
@@ -74,30 +89,30 @@ export default function Home() {
   // Initial mount: status + ascii immediately
   useEffect(() => {
     pollStatus();
-    fetchAscii();
+    fetchAscii('mount');
   }, [pollStatus, fetchAscii]);
 
-  // Status interval (10s)
+  // Status interval (10s) — also detects git-backup pushes
   useEffect(() => {
     const id = setInterval(pollStatus, STATUS_POLL_MS);
     return () => clearInterval(id);
   }, [pollStatus]);
 
-  // ASCII countdown + interval (5 min)
+  // ASCII sync with git-backup: when status-snapshot.json's timestampUnix
+  // advances (meaning git-backup pushed new data ~5min later), fetch fresh
+  // ASCII art. This keeps the art refresh locked to the data refresh cycle.
   useEffect(() => {
-    setNextAsciiIn(ASCII_POLL_MS);
-    const id = setInterval(() => {
-      setNextAsciiIn(prev => {
-        const next = prev - 1000;
-        if (next <= 0) {
-          fetchAscii();
-          return ASCII_POLL_MS;
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [fetchAscii]);
+    if (!status?.snapshot?.timestampUnix) return;
+    const snapTs = status.snapshot.timestampUnix;
+    if (snapTs !== lastSeenSnapshotTs) {
+      const isNew = lastSeenSnapshotTs !== 0 && snapTs > lastSeenSnapshotTs;
+      setLastSeenSnapshotTs(snapTs);
+      if (isNew) {
+        // git-backup just pushed — sync ASCII art refresh to it
+        fetchAscii('git-sync');
+      }
+    }
+  }, [status?.snapshot?.timestampUnix, lastSeenSnapshotTs, fetchAscii]);
 
   // ── Loading state (initial boot) ───────────────────────────────
   if (!booted && !status && !statusErr) {
@@ -124,9 +139,9 @@ export default function Home() {
           history={asciiHistory}
           loading={asciiLoading}
           err={asciiErr}
-          nextIn={nextAsciiIn}
+          lastFetch={lastAsciiFetch}
           status={status}
-          onRefresh={fetchAscii}
+          onRefresh={() => fetchAscii('manual')}
         />
 
         {/* Anomaly feed + logs (two-up on desktop) */}
@@ -487,27 +502,21 @@ function VersionCard({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ASCII STREAM — the centerpiece, refreshes every 5 min
+// ASCII STREAM — refreshes synced with git-backup (every 5 min)
 // ═══════════════════════════════════════════════════════════════════
 function AsciiStream({
-  current, history, loading, err, nextIn, status, onRefresh,
+  current, history, loading, err, lastFetch, status, onRefresh,
 }: {
   current: AsciiPiece | null;
   history: AsciiPiece[];
   loading: boolean;
   err: string | null;
-  nextIn: number;
+  lastFetch: number;
   status: AggregatedStatus | null;
   onRefresh: () => void;
 }) {
-  const mins = Math.floor(nextIn / 60_000);
-  const secs = Math.floor((nextIn % 60_000) / 1000);
-  const countdown = `${mins}:${secs.toString().padStart(2, '0')}`;
-
-  // Refresh bar fills as the countdown ticks down
-  const totalMs = ASCII_POLL_MS;
-  const elapsed = totalMs - nextIn;
-  const refreshPct = Math.min(100, (elapsed / totalMs) * 100);
+  // Show "last refreshed X ago" + "next: when git pushes" instead of a countdown
+  const lastFetchStr = lastFetch > 0 ? fmtRelative(new Date(lastFetch).toISOString()) : 'never';
 
   return (
     <section className="rounded-lg border border-primary/40 bg-card overflow-hidden">
@@ -524,7 +533,7 @@ function AsciiStream({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-[10px] md:text-xs font-mono text-muted-foreground">
-            next refresh in <span className="text-primary">{countdown}</span>
+            synced w/ git · last: <span className="text-primary">{lastFetchStr}</span>
           </span>
           <button
             onClick={onRefresh}
@@ -536,11 +545,10 @@ function AsciiStream({
         </div>
       </div>
 
-      {/* Refresh progress bar */}
+      {/* Refresh indicator bar — pulses when loading, dim otherwise */}
       <div className="h-0.5 bg-secondary">
         <div
-          className={`h-full bg-primary glow transition-all duration-1000 ${loading ? 'animate-pulse' : ''}`}
-          style={{ width: `${loading ? 100 : refreshPct}%` }}
+          className={`h-full bg-primary glow transition-all duration-500 ${loading ? 'w-full animate-pulse' : 'w-0'}`}
         />
       </div>
 
@@ -556,7 +564,7 @@ function AsciiStream({
             <pre className="ascii-pre text-primary glow inline-block text-left">
 {`  ╔══════════════════════════╗
   ║  generating ascii art... ║
-  ║  querying gemini-2.0...  ║
+  ║  querying glm-4.5-air... ║
   ╚══════════════════════════╝
         ▓▓▓░░░░░░░`}
             </pre>

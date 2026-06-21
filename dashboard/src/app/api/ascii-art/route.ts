@@ -224,51 +224,64 @@ export async function GET() {
   const theme = pickTheme(seed);
   const prompt = buildPrompt(styleRef, status, theme);
 
-  // Call OpenRouter. Models we'll try in order (free tier).
-  // Gemini free models are not always available on OpenRouter, so we
-  // fall back through other strong free models that handle ASCII art well.
+  // Call OpenRouter. Models we'll try in order.
+  // GLM-4.5-air is the primary — cheap ($0.0001/gen), fast, good at ASCII art.
+  // We disable reasoning so it returns content directly (not thinking tokens).
+  // Free gemma models are fallback when GLM is unavailable.
   const models = [
-    'google/gemma-4-31b-it:free',        // 31B, 256k ctx, great at creative
-    'google/gemma-4-26b-a4b-it:free',    // 26B MoE, faster
-    'meta-llama/llama-3.3-70b-instruct:free', // 70B, strong but often rate-limited
-    'qwen/qwen3-next-80b-a3b-instruct:free',  // 80B MoE, strong
-    'openai/gpt-oss-20b:free',           // smaller fallback
+    { id: 'z-ai/glm-4.5-air', disableReasoning: true },  // primary — cheap + fast
+    { id: 'z-ai/glm-4.6', disableReasoning: true },       // bigger GLM fallback
+    { id: 'google/gemma-4-31b-it:free', disableReasoning: false },  // free fallback
+    { id: 'google/gemma-4-26b-a4b-it:free', disableReasoning: false },
+    { id: 'openai/gpt-oss-20b:free', disableReasoning: false },
   ];
 
   let lastErr = 'unknown error';
-  for (const model of models) {
+  let rateLimited = false;
+  for (const { id: model, disableReasoning } of models) {
     try {
+      const body: Record<string, unknown> = {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.9,
+        max_tokens: 1800,
+      };
+      // GLM reasoning models burn tokens on "thinking" — disable so we get
+      // actual content. Free models don't support this flag.
+      if (disableReasoning) {
+        body.reasoning = { enabled: false, exclude: true };
+      }
+
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://wankle-dashboard.vercel.app',
+          'HTTP-Referer': 'https://wankle-trials.vercel.app',
           'X-Title': 'Wankle Trials Dashboard',
         },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.9,
-          max_tokens: 1800,
-        }),
+        body: JSON.stringify(body),
         next: { revalidate: 0 },
       });
 
       if (!res.ok) {
         lastErr = `${model}: HTTP ${res.status}`;
+        if (res.status === 429) rateLimited = true;
         continue;
       }
 
       const data = await res.json() as OpenRouterResp;
       if (data.error) {
         lastErr = `${model}: ${data.error.message}`;
+        if (data.error.message?.includes('rate limit') || data.error.message?.includes('Rate limit')) {
+          rateLimited = true;
+        }
         continue;
       }
 
       const content = data.choices?.[0]?.message?.content?.trim();
       if (!content) {
-        lastErr = `${model}: empty response`;
+        lastErr = `${model}: empty content (reasoning burned all tokens?)`;
         continue;
       }
 
@@ -287,6 +300,37 @@ export async function GET() {
     } catch (e) {
       lastErr = `${model}: ${e instanceof Error ? e.message : String(e)}`;
       continue;
+    }
+  }
+
+  // OpenRouter exhausted (rate-limited or all models failed).
+  // Fall back to Pollinations.ai — truly free, no key, no rate limit.
+  // Quality is lower but always works. Better than a broken dashboard.
+  if (rateLimited || lastErr.includes('rate')) {
+    try {
+      const pollRes = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt), {
+        method: 'GET',
+        headers: { 'User-Agent': 'wankle-dashboard/1.0' },
+        next: { revalidate: 0 },
+      });
+      if (pollRes.ok) {
+        const content = (await pollRes.text()).trim();
+        if (content && content.length > 50) {
+          const cleaned = content
+            .replace(/^```[a-zA-Z]*\n?/, '')
+            .replace(/\n?```$/, '')
+            .trim();
+          return NextResponse.json({
+            art: cleaned,
+            theme,
+            model: 'pollinations-openai-fast (fallback)',
+            generatedAt: new Date().toISOString(),
+            note: 'OpenRouter rate-limited, used Pollinations fallback',
+          });
+        }
+      }
+    } catch (e) {
+      lastErr += ` | pollinations: ${e instanceof Error ? e.message : String(e)}`;
     }
   }
 
