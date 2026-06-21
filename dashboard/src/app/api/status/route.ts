@@ -1,20 +1,25 @@
-// Client-side status aggregator. Mirrors the old /api/status logic but
-// runs entirely in the browser — no server needed for GitHub Pages.
+// /api/status — aggregates all live data from GitHub into one payload.
+// Frontend polls this every 10 seconds.
 
+import { NextResponse } from 'next/server';
 import {
   fetchJson, fetchText, parseCsv, TRACKED_VERSIONS,
-} from './github';
+} from '@/lib/github';
 import type {
   AggregatedStatus, CsvRow, StatusSnapshot, TrialManifest,
-} from './types';
+} from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+// Hardcoded batch sequence (mirrors batch-orchestrator.py in the repo).
 const BATCH_SEQUENCE: string[][] = [
   ['v24', 'v25', 'v27'],
   ['v27-no-pathguard', 'v27-cap-pred8', 'v27-mag045'],
-  ['v19', 'v21.7', 'v22.8'],
+  ['v19', 'v21.7', 'v22.8'], // reruns of RK Fight + Dungeon only
 ];
 
-const T0 = new Date('2026-06-20T22:30:00Z').getTime();
+const T0 = new Date('2026-06-20T22:30:00Z').getTime(); // watchdog launch
 
 function fmtEta(min: number | null): string {
   if (min === null) return '—';
@@ -24,9 +29,10 @@ function fmtEta(min: number | null): string {
   return `${h}h ${m}m`;
 }
 
-export async function fetchStatus(): Promise<AggregatedStatus> {
+export async function GET() {
   const errors: string[] = [];
 
+  // Fire all independent reads in parallel.
   const [manifest, snapshot, activeBatch, ...csvResults] = await Promise.all([
     fetchJson<TrialManifest>('trial-manifest.json').catch(() => null),
     fetchJson<StatusSnapshot>('status-snapshot.json').catch(() => null),
@@ -41,6 +47,7 @@ export async function fetchStatus(): Promise<AggregatedStatus> {
   if (!manifest) errors.push('manifest 404');
   if (!snapshot) errors.push('snapshot 404');
 
+  // Build CSVs map + per-version stats.
   const csvs: Record<string, CsvRow[]> = {};
   const csvStats: AggregatedStatus['csvStats'] = {};
   for (const { v, text } of csvResults) {
@@ -83,10 +90,12 @@ export async function fetchStatus(): Promise<AggregatedStatus> {
     }
   }
 
+  // Progress.
   const trialsDone = manifest?.trialsCompleted ?? 0;
   const trialsTotal = manifest?.trialsTotal ?? 1350;
   const progressPct = trialsTotal > 0 ? (trialsDone / trialsTotal) * 100 : 0;
 
+  // ETA from elapsed time and trial rate.
   const now = Date.now();
   const elapsedMin = (now - T0) / 60000;
   let ratePerMin: number | null = null;
@@ -99,6 +108,7 @@ export async function fetchStatus(): Promise<AggregatedStatus> {
     }
   }
 
+  // Batch tracker.
   const currentBatchStr = (activeBatch ?? snapshot?.activeBatch ?? '').trim();
   const currentBatch = currentBatchStr.split(/\s+/).filter(Boolean);
   let currentIndex = -1;
@@ -112,6 +122,7 @@ export async function fetchStatus(): Promise<AggregatedStatus> {
   }
   if (currentIndex === -1 && currentBatch.length > 0) currentIndex = 0;
 
+  // Driver status (heartbeats).
   const driverStatus: AggregatedStatus['driverStatus'] = {};
   if (snapshot) {
     for (const [v, hb] of Object.entries(snapshot.heartbeats)) {
@@ -123,6 +134,7 @@ export async function fetchStatus(): Promise<AggregatedStatus> {
     }
   }
 
+  // Recent log lines (newest first, capped).
   const recentLogLines: { source: string; line: string }[] = [];
   if (snapshot?.logs) {
     for (const [source, lines] of Object.entries(snapshot.logs)) {
@@ -135,7 +147,7 @@ export async function fetchStatus(): Promise<AggregatedStatus> {
     }
   }
 
-  return {
+  const result: AggregatedStatus = {
     fetchedAt: new Date().toISOString(),
     manifest,
     snapshot,
@@ -160,4 +172,10 @@ export async function fetchStatus(): Promise<AggregatedStatus> {
     asciiLiveFiles: snapshot?.asciiArtLive ?? [],
     rawError: errors.length ? errors.join('; ') : undefined,
   };
+
+  return NextResponse.json(result, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=8, stale-while-revalidate=2',
+    },
+  });
 }
