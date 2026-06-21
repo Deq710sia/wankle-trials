@@ -30,6 +30,7 @@ BATCH_FILE = Path('/home/z/agent-ctx/active-batch.txt')
 WATCHDOG_LOG = Path('/home/z/my-project/scripts/cheat-tests/watchdog.log')
 ORCHESTRATOR_LOG = Path('/home/z/my-project/scripts/cheat-tests/batch-orchestrator.log')
 DONE_MARKER = Path('/home/z/agent-ctx/all-batches-complete.flag')
+CHEAT_DIR = Path('/home/z/my-project/scripts/cheat-tests')
 
 # Ordered batch sequence
 BATCH_SEQUENCE = [
@@ -72,6 +73,22 @@ def advance_batch():
     if idx + 1 >= len(BATCH_SEQUENCE):
         log(f'All {len(BATCH_SEQUENCE)} batches complete — writing DONE marker')
         DONE_MARKER.write_text(str(int(time.time())))
+        # Run merge-archived-data.py to fold old RK+Dun rows back into
+        # active CSVs with incomplete=1 column (preserves kill data)
+        log(f'Running merge-archived-data.py to preserve old kill data...')
+        try:
+            import subprocess
+            result = subprocess.run(
+                ['python3', str(CHEAT_DIR / 'merge-archived-data.py')],
+                capture_output=True, text=True, timeout=60
+            )
+            for line in result.stdout.split('\n'):
+                if line.strip():
+                    log(f'  merge: {line}')
+            if result.returncode != 0:
+                log(f'  merge FAILED (exit {result.returncode}): {result.stderr[-500:]}')
+        except Exception as e:
+            log(f'  merge ERROR: {e}')
         return False
     next_batch = BATCH_SEQUENCE[idx + 1]
     log(f'Advancing: batch {idx+1} "{BATCH_SEQUENCE[idx]}" → batch {idx+2} "{next_batch}"')
