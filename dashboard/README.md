@@ -4,6 +4,8 @@ A mobile-friendly, terminal-themed live dashboard for the wankle-trials
 cheat-detection experiment. Reads data directly from this GitHub repo
 (no VM dependency), so it stays up even if the trial VM resets.
 
+**Live site:** https://deq710sia.github.io/wankle-trials/
+
 ## Features
 
 - **Live telemetry** — polls `trial-manifest.json`, `status-snapshot.json`,
@@ -20,34 +22,35 @@ cheat-detection experiment. Reads data directly from this GitHub repo
 - **Mobile-first responsive** — works on phone or desktop
 - **Terminal phosphor theme** — green-on-black with scanlines and glow effects
 
-## Quick deploy (free, ~3 minutes)
+## How to use (first visit)
 
-1. **Push this dashboard subfolder to a fresh GitHub repo** (or just use
-   `Deq710sia/wankle-trials` itself — Vercel will only build the dashboard
-   subfolder).
+1. Open https://deq710sia.github.io/wankle-trials/
+2. Click the **"○ set key"** button in the top-right header (or the
+   "set OpenRouter key" button in the ASCII art section).
+3. Paste your OpenRouter API key (starts with `sk-or-v1-...`).
+   Get a free one at https://openrouter.ai/keys.
+4. Click **save & test** — the key is validated and stored in your
+   browser's localStorage. It never leaves your device except to call
+   OpenRouter directly.
+5. The ASCII art stream starts immediately and refreshes every 5 minutes.
 
-2. Go to **https://vercel.com/new** → import the repo.
+The rest of the dashboard (telemetry, ETA, anomaly feed, logs) works
+without any key — only the ASCII art stream needs it.
 
-3. In Vercel's "Configure Project" screen:
-   - **Root Directory** → click "Edit" → select `dashboard`
-   - **Framework Preset** → Next.js (auto-detected)
-   - **Build Command** → leave as default (`next build`)
-   - **Output Directory** → leave as default
-   - **Install Command** → leave as default
+## Architecture (zero VM dependency, zero server cost)
 
-4. Open **Environment Variables** and add:
-   | Name | Value | Required |
-   |---|---|---|
-   | `OPENROUTER_API_KEY` | `sk-or-v1-...` (from https://openrouter.ai/keys) | ✅ |
-   | `GITHUB_TOKEN` | `ghp_...` (fine-grained PAT, read-only) | ✅ recommended |
-   | `GITHUB_REPO` | `Deq710sia/wankle-trials` | optional (default) |
-   | `GITHUB_BRANCH` | `main` | optional (default) |
-
-5. Click **Deploy**. Site is live in ~2 minutes at
-   `https://wankle-trials.vercel.app` (or whatever Vercel names it).
-
-6. **That's it.** The site will work instantly — no database, no VM, no
-   websockets. It just polls GitHub on a 10-second cadence.
+- **Static export** — Next.js builds to a static `out/` folder. No server,
+  no API routes, no database. Hosted on GitHub Pages (free).
+- **All data fetched client-side** from `raw.githubusercontent.com` —
+  the repo is public so no auth needed. 8-second in-memory cache smooths
+  rapid polls.
+- **ASCII art via OpenRouter** — called directly from the browser.
+  OpenRouter sends `Access-Control-Allow-Origin: *` so browser calls work.
+  The OpenRouter key is stored in `localStorage` and never sent to any
+  server other than OpenRouter.
+- **GitHub Actions auto-deploys** — every push to `main` that touches
+  `dashboard/` triggers `.github/workflows/deploy-dashboard.yml`, which
+  rebuilds the static site and pushes it to GitHub Pages.
 
 ## Why this design
 
@@ -64,9 +67,8 @@ language (box-drawing characters, progress bars, themed vignettes).
 
 ## How the 5-minute refresh works
 
-1. The dashboard page polls `/api/status` every **10 seconds** for live
-   telemetry (progress, ETA, anomaly count, log tails).
-2. Every **5 minutes** it calls `/api/ascii-art` which:
+1. The dashboard page polls for live telemetry every **10 seconds**.
+2. Every **5 minutes** it calls `fetchAsciiArt()` which:
    - Loads 3 reference files from `ascii-art/` in this repo
    - Loads the current trial status (manifest + snapshot)
    - Picks a unique theme from a 40-item pool (rotates per minute)
@@ -81,47 +83,50 @@ language (box-drawing characters, progress bars, themed vignettes).
 dashboard/
 ├── src/
 │   ├── app/
-│   │   ├── api/
-│   │   │   ├── status/route.ts     # aggregates all live data from GitHub
-│   │   │   └── ascii-art/route.ts  # OpenRouter → ASCII art generation
 │   │   ├── globals.css             # terminal phosphor theme + scanlines
 │   │   ├── layout.tsx              # dark mode forced, terminal font
 │   │   └── page.tsx                # the dashboard UI (single page)
-│   ├── lib/
-│   │   ├── github.ts               # raw.githubusercontent.com fetcher + cache
-│   │   ├── types.ts                # shared TypeScript types
-│   │   └── format.ts               # progress bar / time / map name helpers
-│   └── components/ui/              # shadcn/ui components (unused but kept)
-├── .env.example
+│   └── lib/
+│       ├── github.ts               # raw.githubusercontent.com fetcher + cache
+│       ├── status.ts               # aggregates all live data into one payload
+│       ├── ascii-art.ts            # OpenRouter → ASCII art generation
+│       ├── types.ts                # shared TypeScript types
+│       └── format.ts               # progress bar / time / map name helpers
+├── .env.example                    # reference only — keys go in localStorage
 ├── .gitignore
 ├── package.json
-├── next.config.ts
+├── next.config.ts                  # output: 'export' + basePath: /wankle-trials
 ├── tsconfig.json
 ├── tailwind.config.ts
 ├── postcss.config.mjs
 ├── eslint.config.mjs
 └── README.md (this file)
+
+.github/workflows/deploy-dashboard.yml  # builds + deploys to Pages on push
 ```
 
 ## Local dev
 
 ```bash
 cd dashboard
-cp .env.example .env
-# fill in OPENROUTER_API_KEY and GITHUB_TOKEN
 bun install
 bun run dev
 # open http://localhost:3000
 ```
 
+Note: for local dev, you may need to temporarily remove `basePath` and
+`output: 'export'` from `next.config.ts` since those are only needed for
+the GitHub Pages deployment.
+
 ## Notes
 
-- The 9-version batch tracker is hardcoded in `src/app/api/status/route.ts`
+- The 9-version batch tracker is hardcoded in `src/lib/status.ts`
   (the `BATCH_SEQUENCE` constant). If the batch sequence changes, update
   it there.
 - The `T0` constant (watchdog launch timestamp) is also hardcoded — it's
   used to compute the trial rate. Update it if the watchdog restarts.
-- The ASCII theme pool lives in `src/app/api/ascii-art/route.ts` — feel
+- The ASCII theme pool lives in `src/lib/ascii-art.ts` — feel
   free to add new themes to keep things fresh.
 - All GitHub fetches go through an 8-second in-memory cache (in
   `src/lib/github.ts`) so rapid polls don't hit rate limits.
+- Since the repo is public, no GITHUB_TOKEN is needed for read access.

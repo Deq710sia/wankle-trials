@@ -6,17 +6,14 @@ import {
   fmtAge, fmtNum, fmtPct, fmtRelative, fmtTime,
   progressBar, perMapBreakdown, shortMap,
 } from '@/lib/format';
+import { fetchStatus } from '@/lib/status';
+import {
+  fetchAsciiArt, getOpenRouterKey, setOpenRouterKey, clearOpenRouterKey,
+  type AsciiPiece,
+} from '@/lib/ascii-art';
 
-const STATUS_POLL_MS = 10_000;       // 10s status poll
-const ASCII_POLL_MS = 5 * 60_000;    // 5 min ASCII art refresh
-const ASCII_COUNTDOWN_GRACE_MS = 200;
-
-interface AsciiPiece {
-  art: string;
-  theme: string;
-  model: string;
-  generatedAt: string;
-}
+const STATUS_POLL_MS = 10_000;
+const ASCII_POLL_MS = 5 * 60_000;
 
 export default function Home() {
   const [status, setStatus] = useState<AggregatedStatus | null>(null);
@@ -27,54 +24,63 @@ export default function Home() {
   const [asciiHistory, setAsciiHistory] = useState<AsciiPiece[]>([]);
   const [nextAsciiIn, setNextAsciiIn] = useState(ASCII_POLL_MS);
   const [booted, setBooted] = useState(false);
-  const lastStatusRef = useRef<AggregatedStatus | null>(null);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [hasKey, setHasKey] = useState(false);
 
-  // ── Status poll ────────────────────────────────────────────────
+  // Check if OpenRouter key is set (on mount)
+  useEffect(() => {
+    setHasKey(!!getOpenRouterKey());
+  }, []);
+
   const pollStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/status', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: AggregatedStatus = await res.json();
+      const data = await fetchStatus();
       setStatus(data);
       setStatusErr(null);
-      lastStatusRef.current = data;
       setBooted(true);
     } catch (e) {
       setStatusErr(e instanceof Error ? e.message : String(e));
+      setBooted(true);
     }
   }, []);
 
-  // ── ASCII art fetch ────────────────────────────────────────────
+  // Keep a ref to the latest status so fetchAscii doesn't depend on it
+  const statusRef = useRef<AggregatedStatus | null>(null);
+  useEffect(() => { statusRef.current = status; }, [status]);
+
   const fetchAscii = useCallback(async () => {
+    if (!getOpenRouterKey()) {
+      setShowKeyModal(true);
+      return;
+    }
     setAsciiLoading(true);
     setAsciiErr(null);
     try {
-      const res = await fetch('/api/ascii-art', { cache: 'no-store' });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `HTTP ${res.status}`);
+      // Need a status snapshot for the prompt — fetch fresh if we don't have one.
+      let s = statusRef.current;
+      if (!s) {
+        s = await fetchStatus();
+        setStatus(s);
       }
-      const data = await res.json();
-      if (!data.art) throw new Error(data.error || 'no art in response');
-      const piece: AsciiPiece = {
-        art: data.art,
-        theme: data.theme || 'untitled',
-        model: data.model || 'unknown',
-        generatedAt: data.generatedAt || new Date().toISOString(),
-      };
+      const piece = await fetchAsciiArt(s);
       setAscii(piece);
       setAsciiHistory(prev => [piece, ...prev].slice(0, 6));
     } catch (e) {
-      setAsciiErr(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === 'NO_API_KEY') {
+        setShowKeyModal(true);
+      } else {
+        setAsciiErr(msg);
+      }
     } finally {
       setAsciiLoading(false);
     }
   }, []);
 
-  // Initial mount: status + ascii immediately
+  // Initial mount
   useEffect(() => {
     pollStatus();
-    fetchAscii();
+    if (getOpenRouterKey()) fetchAscii();
   }, [pollStatus, fetchAscii]);
 
   // Status interval (10s)
@@ -90,7 +96,7 @@ export default function Home() {
       setNextAsciiIn(prev => {
         const next = prev - 1000;
         if (next <= 0) {
-          fetchAscii();
+          if (getOpenRouterKey()) fetchAscii();
           return ASCII_POLL_MS;
         }
         return next;
@@ -99,26 +105,29 @@ export default function Home() {
     return () => clearInterval(id);
   }, [fetchAscii]);
 
-  // ── Loading state (initial boot) ───────────────────────────────
-  if (!booted && !status && !statusErr) {
+  const onKeySaved = useCallback(() => {
+    setHasKey(true);
+    setShowKeyModal(false);
+    fetchAscii();
+  }, [fetchAscii]);
+
+  if (!booted) {
     return <BootSplash />;
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Header status={status} />
+      <Header
+        status={status}
+        hasKey={hasKey}
+        onOpenKeyModal={() => setShowKeyModal(true)}
+      />
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6 space-y-4 md:space-y-6">
-        {/* Top row: ETA + health */}
         <TopRow status={status} err={statusErr} />
-
-        {/* Batch tracker */}
         <BatchTracker status={status} />
-
-        {/* Per-version grid */}
         <VersionGrid status={status} />
 
-        {/* ASCII art stream (the centerpiece) */}
         <AsciiStream
           current={ascii}
           history={asciiHistory}
@@ -127,9 +136,10 @@ export default function Home() {
           nextIn={nextAsciiIn}
           status={status}
           onRefresh={fetchAscii}
+          hasKey={hasKey}
+          onOpenKeyModal={() => setShowKeyModal(true)}
         />
 
-        {/* Anomaly feed + logs (two-up on desktop) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <AnomalyFeed status={status} />
           <LogFeed status={status} />
@@ -137,12 +147,19 @@ export default function Home() {
 
         <Footer status={status} err={statusErr} />
       </main>
+
+      {showKeyModal && (
+        <ApiKeyModal
+          onClose={() => setShowKeyModal(false)}
+          onSaved={onKeySaved}
+        />
+      )}
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// BOOT SPLASH (shown only on very first load, no animation after)
+// BOOT SPLASH
 // ═══════════════════════════════════════════════════════════════════
 function BootSplash() {
   return (
@@ -176,9 +193,111 @@ function BootSplash() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// API KEY MODAL
+// ═══════════════════════════════════════════════════════════════════
+function ApiKeyModal({
+  onClose, onSaved,
+}: { onClose: () => void; onSaved: () => void }) {
+  const [key, setKey] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+
+  const handleSave = async () => {
+    const trimmed = key.trim();
+    if (!trimmed.startsWith('sk-or-v1-')) {
+      setError('OpenRouter keys start with "sk-or-v1-" — double-check what you pasted.');
+      return;
+    }
+    setTesting(true);
+    setError(null);
+    try {
+      // Quick validation: list models (cheap call)
+      const res = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: { 'Authorization': `Bearer ${trimmed}` },
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      setOpenRouterKey(trimmed);
+      onSaved();
+    } catch (e) {
+      setError(`Key check failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur flex items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-lg border border-primary/40 bg-card p-5 md:p-6 shadow-2xl">
+        <div className="flex items-start justify-between mb-3">
+          <h2 className="text-base md:text-lg font-bold text-primary glow">
+            ▚ OpenRouter API Key
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground text-lg leading-none"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+        <p className="text-xs md:text-sm text-muted-foreground mb-4 leading-relaxed">
+          The ASCII art stream is powered by OpenRouter&apos;s free tier. Your key
+          is stored only in this browser&apos;s localStorage — it never leaves
+          your device except to call OpenRouter directly. Get a free key at{' '}
+          <a
+            href="https://openrouter.ai/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline hover:opacity-80"
+          >
+            openrouter.ai/keys
+          </a>.
+        </p>
+        <textarea
+          value={key}
+          onChange={e => setKey(e.target.value)}
+          placeholder="sk-or-v1-..."
+          rows={3}
+          className="w-full px-3 py-2 rounded border border-border bg-secondary/50 text-foreground text-xs md:text-sm font-mono resize-none focus:outline-none focus:border-primary"
+          autoFocus
+        />
+        {error && (
+          <div className="mt-2 text-xs text-destructive font-mono">
+            ⚠ {error}
+          </div>
+        )}
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <button
+            onClick={() => { clearOpenRouterKey(); onClose(); }}
+            className="text-xs text-muted-foreground hover:text-destructive font-mono"
+          >
+            clear saved key
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!key.trim() || testing}
+            className="px-4 py-2 rounded bg-primary text-background text-xs md:text-sm font-bold disabled:opacity-40 hover:opacity-90 transition"
+          >
+            {testing ? 'validating...' : 'save & test'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // HEADER
 // ═══════════════════════════════════════════════════════════════════
-function Header({ status }: { status: AggregatedStatus | null }) {
+function Header({
+  status, hasKey, onOpenKeyModal,
+}: {
+  status: AggregatedStatus | null;
+  hasKey: boolean;
+  onOpenKeyModal: () => void;
+}) {
   const live = status?.snapshot?.heartbeats
     ? Object.values(status.snapshot.heartbeats).some(h => h.alive)
     : false;
@@ -209,6 +328,17 @@ function Header({ status }: { status: AggregatedStatus | null }) {
               {status ? fmtRelative(status.fetchedAt) : '—'}
             </span>
           </div>
+          <button
+            onClick={onOpenKeyModal}
+            className={`px-2 py-1 rounded border text-[10px] md:text-xs font-mono ${
+              hasKey
+                ? 'border-success/40 text-success hover:bg-success/10'
+                : 'border-warning/60 text-warning hover:bg-warning/10'
+            }`}
+            title="OpenRouter API key"
+          >
+            {hasKey ? '● key set' : '○ set key'}
+          </button>
         </div>
       </div>
     </header>
@@ -222,7 +352,7 @@ function threadColor(pct: number): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// TOP ROW — big ETA + rate + progress bar
+// TOP ROW
 // ═══════════════════════════════════════════════════════════════════
 function TopRow({ status, err }: { status: AggregatedStatus | null; err: string | null }) {
   if (err && !status) {
@@ -362,7 +492,7 @@ function BatchVersionStatus({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// VERSION GRID — one card per tracked version
+// VERSION GRID
 // ═══════════════════════════════════════════════════════════════════
 function VersionGrid({ status }: { status: AggregatedStatus | null }) {
   const versions = status?.manifest?.perVersion
@@ -449,7 +579,6 @@ function VersionCard({
         {pct.toFixed(1)}% · {completed}/{target}
       </div>
 
-      {/* Per-map breakdown */}
       {maps.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">
           {maps.map(m => (
@@ -464,7 +593,6 @@ function VersionCard({
         </div>
       )}
 
-      {/* CSV stats */}
       {csvStats && (
         <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] font-mono text-muted-foreground">
           <div>kills <span className="text-foreground">{csvStats.avgKills.toFixed(1)}</span></div>
@@ -474,7 +602,6 @@ function VersionCard({
         </div>
       )}
 
-      {/* Driver heartbeat */}
       {driver && (
         <div className="mt-2 pt-2 border-t border-border text-[10px] font-mono text-muted-foreground">
           hb: <span className={driver.alive ? 'text-success' : 'text-destructive'}>
@@ -487,10 +614,10 @@ function VersionCard({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ASCII STREAM — the centerpiece, refreshes every 5 min
+// ASCII STREAM
 // ═══════════════════════════════════════════════════════════════════
 function AsciiStream({
-  current, history, loading, err, nextIn, status, onRefresh,
+  current, history, loading, err, nextIn, status, onRefresh, hasKey, onOpenKeyModal,
 }: {
   current: AsciiPiece | null;
   history: AsciiPiece[];
@@ -499,12 +626,13 @@ function AsciiStream({
   nextIn: number;
   status: AggregatedStatus | null;
   onRefresh: () => void;
+  hasKey: boolean;
+  onOpenKeyModal: () => void;
 }) {
   const mins = Math.floor(nextIn / 60_000);
   const secs = Math.floor((nextIn % 60_000) / 1000);
   const countdown = `${mins}:${secs.toString().padStart(2, '0')}`;
 
-  // Refresh bar fills as the countdown ticks down
   const totalMs = ASCII_POLL_MS;
   const elapsed = totalMs - nextIn;
   const refreshPct = Math.min(100, (elapsed / totalMs) * 100);
@@ -527,7 +655,7 @@ function AsciiStream({
             next refresh in <span className="text-primary">{countdown}</span>
           </span>
           <button
-            onClick={onRefresh}
+            onClick={hasKey ? onRefresh : onOpenKeyModal}
             disabled={loading}
             className="text-[10px] md:text-xs px-2 py-1 rounded border border-border hover:border-primary hover:text-primary transition disabled:opacity-40 font-mono"
           >
@@ -536,7 +664,6 @@ function AsciiStream({
         </div>
       </div>
 
-      {/* Refresh progress bar */}
       <div className="h-0.5 bg-secondary">
         <div
           className={`h-full bg-primary glow transition-all duration-1000 ${loading ? 'animate-pulse' : ''}`}
@@ -545,18 +672,37 @@ function AsciiStream({
       </div>
 
       <div className="p-3 md:p-4">
-        {err && !current && (
+        {!hasKey && (
+          <div className="text-center py-6 space-y-3">
+            <pre className="ascii-pre text-muted-foreground inline-block">
+{`╔══════════════════════════════════════════╗
+║  ASCII art stream needs an OpenRouter key ║
+║   click below to set it (stored locally)  ║
+╚══════════════════════════════════════════╝`}
+            </pre>
+            <div>
+              <button
+                onClick={onOpenKeyModal}
+                className="px-4 py-2 rounded bg-primary text-background text-xs md:text-sm font-bold hover:opacity-90 transition"
+              >
+                set OpenRouter key
+              </button>
+            </div>
+          </div>
+        )}
+
+        {hasKey && err && !current && (
           <div className="text-sm text-destructive font-mono">
             ⚠ ascii gen failed: {err}
           </div>
         )}
 
-        {loading && !current && (
+        {hasKey && loading && !current && (
           <div className="py-12 text-center">
             <pre className="ascii-pre text-primary glow inline-block text-left">
 {`  ╔══════════════════════════╗
   ║  generating ascii art... ║
-  ║  querying gemini-2.0...  ║
+  ║  querying gemma-4-31b... ║
   ╚══════════════════════════╝
         ▓▓▓░░░░░░░`}
             </pre>
@@ -569,7 +715,6 @@ function AsciiStream({
           </pre>
         )}
 
-        {/* Meta */}
         {current && (
           <div className="mt-3 pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2 text-[10px] md:text-xs font-mono text-muted-foreground">
             <div>
@@ -584,7 +729,6 @@ function AsciiStream({
           </div>
         )}
 
-        {/* History strip */}
         {history.length > 1 && (
           <details className="mt-3 group">
             <summary className="text-[10px] md:text-xs font-mono text-muted-foreground cursor-pointer hover:text-primary">
@@ -697,7 +841,7 @@ function Footer({ status, err }: { status: AggregatedStatus | null; err: string 
     <footer className="mt-6 pt-4 border-t border-border text-[10px] md:text-xs text-muted-foreground font-mono space-y-1">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          data source: github.com/Deq710sia/wankle-trials (raw)
+          data source: github.com/Deq710sia/wankle-trials (raw · public)
         </div>
         <div>
           ascii backend: OpenRouter · free models (gemma-4 / llama-3.3 / qwen3)
@@ -705,7 +849,7 @@ function Footer({ status, err }: { status: AggregatedStatus | null; err: string 
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 opacity-70">
         <div>
-          status poll: 10s · ascii refresh: 5min
+          status poll: 10s · ascii refresh: 5min · hosted on GitHub Pages
         </div>
         <div>
           {status?.rawError
