@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-06-21T02:52:03.618902+00:00",
+  "lastUpdated": "2026-06-21T02:57:03.864715+00:00",
   "watchdogPid": 7736,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
@@ -96,7 +96,14 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v27-mag045"
     }
   },
-  "backupLocations": [],
+  "backupLocations": [
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v27-t120-20260621_025203",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v25-t90-20260621_025203",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v24-t120-20260621_025203",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v22.8-t90-20260621_025203",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v21.7-t90-20260621_025203",
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v19-t90-20260621_025203"
+  ],
   "plannedVersions": [
     "v19",
     "v21.7",
