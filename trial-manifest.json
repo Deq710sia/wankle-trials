@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-06-20T23:58:04.347975+00:00",
+  "lastUpdated": "2026-06-21T00:03:04.568559+00:00",
   "watchdogPid": 30223,
   "watchdogLogPath": "/home/z/my-project/scripts/cheat-tests/watchdog.log",
   "manifestUpdaterLogPath": "/home/z/my-project/scripts/cheat-tests/manifest-updater.log",
@@ -20,7 +20,7 @@
     "v27-cap-pred8",
     "v27-mag045"
   ],
-  "trialsCompleted": 543,
+  "trialsCompleted": 547,
   "trialsTotal": 1350,
   "perVersion": {
     "v19": {
@@ -48,7 +48,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v22.8"
     },
     "v24": {
-      "completed": 90,
+      "completed": 91,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v24-results.csv",
@@ -64,7 +64,7 @@
       "telemetryDir": "/home/z/agent-ctx/telemetry/v25"
     },
     "v27": {
-      "completed": 88,
+      "completed": 91,
       "target": 150,
       "status": "in_progress",
       "csvPath": "/home/z/my-project/scripts/cheat-tests/parallel-v27-results.csv",
@@ -97,6 +97,7 @@
     }
   },
   "backupLocations": [
+    "/home/z/my-project/download/backups/trial-watchdog-backups/v27-t90-20260621_000000",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v24-t90-20260620_235730",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v25-t90-20260620_234400",
     "/home/z/my-project/download/backups/trial-watchdog-backups/v27-t60-20260620_225830",
